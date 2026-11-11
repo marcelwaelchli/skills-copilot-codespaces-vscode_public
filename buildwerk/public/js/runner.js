@@ -47,6 +47,12 @@ function handle(event) {
       run.phase = 'running';
       run.pausedOp = null;
       break;
+    case 'prompt':
+      run.waitingForInput = true;
+      break;
+    case 'prompt-answered':
+      run.waitingForInput = false;
+      break;
     case 'run-end':
       run.phase = 'done';
       run.status = event.status;

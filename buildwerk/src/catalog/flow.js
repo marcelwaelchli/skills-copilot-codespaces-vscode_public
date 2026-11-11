@@ -171,6 +171,39 @@ export default [
     },
   },
   {
+    type: 'flow.confirm',
+    category: 'flow',
+    label: 'Bestätigung einholen',
+    icon: 'help',
+    description: 'Hält das Makro an und fragt, ob es weitergehen soll – zum Beispiel vor einer Veröffentlichung.',
+    fields: [
+      area('message', 'Frage', { required: true, default: 'Fortfahren?' }),
+      select('onNo', 'Bei «Nein»', [
+        { value: 'fail', label: 'Makro mit Fehler abbrechen', short: '' },
+        { value: 'stop', label: 'Makro ohne Fehler beenden', short: '' },
+      ]),
+      select('unattended', 'Ohne Bedienung, etwa in CI', [
+        { value: 'continue', label: 'Ohne Rückfrage fortfahren', short: '' },
+        { value: 'fail', label: 'Abbrechen', short: '' },
+      ]),
+    ],
+    summary: '{message}',
+    async run(ctx, p) {
+      const reply = await ctx.ask({ kind: 'confirm', title: 'Bestätigung', message: p.message });
+      if (reply === undefined) {
+        if (p.unattended === 'fail') throw new OperationError('Eine Bestätigung ist nötig, aber niemand ist da, der antworten könnte.');
+        ctx.log('Niemand da, der antworten könnte – es geht ohne Rückfrage weiter.');
+        return;
+      }
+      if (reply === true) return void ctx.log('Bestätigt.');
+      if (p.onNo === 'stop') {
+        ctx.log('Abgelehnt – das Makro wird beendet.');
+        throw new StopSignal();
+      }
+      throw new OperationError('Abgelehnt.');
+    },
+  },
+  {
     type: 'flow.stop',
     category: 'flow',
     label: 'Makro beenden',

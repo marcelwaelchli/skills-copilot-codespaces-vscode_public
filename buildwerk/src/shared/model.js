@@ -146,6 +146,11 @@ export function referencedVars(text) {
   return names;
 }
 
+/** Allowed values of a variable or question: separated by comma or line break; empty means «anything». */
+export function parseChoices(text) {
+  return String(text ?? '').split(/[,\n]/).map((choice) => choice.trim()).filter(Boolean);
+}
+
 export function formatDuration(ms) {
   if (ms == null) return '';
   if (ms < 1000) return `${Math.round(ms)} ms`;

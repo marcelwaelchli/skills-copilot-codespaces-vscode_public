@@ -1,7 +1,7 @@
 // Generates a GitHub Actions workflow that runs a macro through the CLI.
 // Pure text generation, so it works in the browser and on the Node side.
 
-import { walk } from './model.js';
+import { parseChoices, walk } from './model.js';
 
 const MAX_INPUTS = 25; // GitHub's limit for workflow_dispatch inputs
 
@@ -48,12 +48,18 @@ export function exportGithubActions(macro, { macroPath, toolPath = 'buildwerk', 
   if (inputs.length) {
     lines.push('    inputs:');
     for (const variable of inputs) {
-      const fallback = variable.value ? ` (Standard: ${variable.value})` : '';
-      lines.push(
-        `      ${variable.name}:`,
-        `        description: ${quote((variable.description || variable.name) + fallback)}`,
-        '        required: false',
-      );
+      const choices = parseChoices(variable.choices);
+      const label = variable.description || variable.name;
+      lines.push(`      ${variable.name}:`);
+      if (choices.length) {
+        // A fixed set of values becomes a drop-down in the «Run workflow» dialog.
+        lines.push(`        description: ${quote(label)}`, '        required: false', '        type: choice');
+        if (choices.includes(variable.value)) lines.push(`        default: ${quote(variable.value)}`);
+        lines.push('        options:', ...choices.map((choice) => `          - ${quote(choice)}`));
+      } else {
+        const fallback = variable.value ? ` (Standard: ${variable.value})` : '';
+        lines.push(`        description: ${quote(label + fallback)}`, '        required: false');
+      }
     }
   }
   lines.push(

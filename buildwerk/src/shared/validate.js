@@ -1,7 +1,7 @@
 // Static checks on a macro. Runs in the browser (live problem list) and on the
 // Node side (before a run starts).
 
-import { CHAIN_RULES, VAR_NAME, effectiveProps, isFieldVisible, referencedVars, walk } from './model.js';
+import { CHAIN_RULES, VAR_NAME, effectiveProps, isFieldVisible, parseChoices, referencedVars, walk } from './model.js';
 
 const LOOP_TYPES = new Set(['flow.foreach', 'flow.while']);
 
@@ -28,6 +28,12 @@ export function validateMacro(macro, catalog, systemVariables = []) {
     }
     seen.add(name);
     known.add(name);
+    // A default that refers to other variables can only be checked at run time.
+    const choices = parseChoices(variable.choices);
+    const fallback = String(variable.value ?? '');
+    if (choices.length && !fallback.includes('${') && !choices.includes(fallback)) {
+      add(null, 'error', `Der Standardwert von «${name}» muss einer der Auswahlwerte sein (${choices.join(', ')}).`);
+    }
   }
 
   // Variables that operations create at run time (loop variables, captured output, ...).

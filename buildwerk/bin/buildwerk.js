@@ -10,6 +10,7 @@ import { MacroRun } from '../src/engine.js';
 import { createConsoleReporter } from '../src/reporter.js';
 import { exportGithubActions } from '../src/shared/export-gha.js';
 import { opLabel, findOp } from '../src/shared/model.js';
+import { askOnTerminal } from '../src/terminal.js';
 import { validateMacro } from '../src/shared/validate.js';
 
 const toolDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -36,6 +37,7 @@ Optionen für run:
   --from <id>           Erst ab dieser Operation ausführen
   --only <id>           Nur diese Operation ausführen
   --quiet               Nur Fehler und Warnungen ausgeben
+  --no-input            Keine Rückfragen stellen, sondern Vorgabewerte nehmen (wie in CI)
   --no-color            Keine Farben
   Variablen lassen sich auch über die Umgebung setzen: BW_VAR_NAME=Wert
 
@@ -78,6 +80,7 @@ const commands = {
         from: { type: 'string' },
         only: { type: 'string' },
         quiet: { type: 'boolean' },
+        'no-input': { type: 'boolean' },
         'no-color': { type: 'boolean' },
       },
     });
@@ -94,13 +97,31 @@ const commands = {
       overrides[assignment.slice(0, index)] = assignment.slice(index + 1);
     }
 
+    // Questions are only asked when a person can answer: on a terminal, and not with --no-input.
+    const interactive = Boolean(process.stdin.isTTY) && !values['no-input'];
     const run = new MacroRun(macro, {
       macroFile: path.resolve(file),
       workspace: process.cwd(),
       overrides,
       startAt: values.from,
       only: values.only,
+      interactive,
     });
+    if (interactive) {
+      run.on('event', async (event) => {
+        if (event.type !== 'prompt') return;
+        const asking = new AbortController();
+        const onInterrupt = () => {
+          run.stop();
+          asking.abort();
+        };
+        try {
+          run.answer(event.promptId, await askOnTerminal(event, { signal: asking.signal, onInterrupt }));
+        } catch {
+          // interrupted while typing: the run is already stopping
+        }
+      });
+    }
     const color = !values['no-color'] && !process.env.NO_COLOR && process.stdout.isTTY;
     run.on('event', createConsoleReporter({ color, quiet: values.quiet }));
     process.once('SIGINT', () => run.stop());

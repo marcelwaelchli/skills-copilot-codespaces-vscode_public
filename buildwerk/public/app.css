@@ -962,7 +962,7 @@ kbd {
 
 .vars {
   padding: 14px;
-  max-width: 980px;
+  max-width: 1180px;
 }
 
 .vars-table {
@@ -986,11 +986,15 @@ kbd {
 }
 
 .vars-table td:nth-child(1) {
-  width: 22%;
+  width: 18%;
 }
 
 .vars-table td:nth-child(2) {
-  width: 30%;
+  width: 22%;
+}
+
+.vars-table td:nth-child(4) {
+  width: 15%;
 }
 
 .vars-table .center {
@@ -1473,6 +1477,14 @@ kbd {
 
 .dialog-text {
   color: var(--muted);
+}
+
+.prompt-message {
+  white-space: pre-wrap;
+}
+
+.dialog-body .field {
+  margin-bottom: 4px;
 }
 
 .dialog-foot {

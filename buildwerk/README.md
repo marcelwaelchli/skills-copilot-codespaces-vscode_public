@@ -50,6 +50,8 @@ Variablen werden überall als `${NAME}` eingesetzt und stehen Skripten und Progr
 - **Standardwerte** dürfen frühere Variablen und Systemvariablen verwenden, etwa `${TEMP_DIR}/ausgabe`.
 - **Geheim:** Der Wert erscheint im Protokoll als `***`. Bleibt der Standardwert leer, wird die gleichnamige Umgebungsvariable verwendet – so steht kein Passwort in der Makrodatei.
 - **Persistent:** Der Wert am Ende eines Laufs ist der Startwert des nächsten, zum Beispiel für eine fortlaufende Build-Nummer. Er liegt neben dem Makro in einer `.state.json`-Datei.
+- **Auswahlwerte:** Eine Liste wie `Debug, Release` lässt nur diese Werte zu, egal woher der Wert kommt.
+- **Abfragen:** Beim Start fragt Buildwerk in einem Formular nach den so markierten Variablen und schlägt die Standardwerte vor. Wurde ein Wert schon mitgegeben (`--var`), wird nicht mehr gefragt.
 - **Aus Skripten zurückgeben:** `echo "NAME=wert" >> "$BUILDWERK_VARS"` setzt eine Makrovariable.
 - `${env:NAME}` liest eine Umgebungsvariable, `$${NAME}` ergibt den wörtlichen Text `${NAME}`.
 - Ein Verweis auf eine Variable, die es nicht gibt, bricht die Operation mit einer klaren Meldung ab. Ausnahme sind Shell-Skripte: dort bleibt Unbekanntes stehen, weil `${…}` der Shell gehören kann.
@@ -60,14 +62,14 @@ Systemvariablen wie `${BASE_DIR}`, `${DATE}`, `${TIMESTAMP}`, `${OS}` oder `${ER
 
 | Kategorie | Operationen |
 | --- | --- |
-| Ablaufsteuerung | Gruppe, Wenn / Sonst wenn / Sonst, Für jedes (Liste, Dateien, Zahlenbereich), Solange, Schleife verlassen, Nächster Durchlauf, Versuchen / Bei Fehler / Abschliessend, Parallel, Makro ausführen, Warten, Makro beenden, Fehler auslösen |
-| Variablen & Protokoll | Variable setzen, Version erhöhen, Meldung ausgeben, Notiz, JavaScript |
+| Ablaufsteuerung | Gruppe, Wenn / Sonst wenn / Sonst, Für jedes (Liste, Dateien, Zahlenbereich), Solange, Schleife verlassen, Nächster Durchlauf, Versuchen / Bei Fehler / Abschliessend, Parallel, Makro ausführen, Warten, Bestätigung einholen, Makro beenden, Fehler auslösen |
+| Variablen & Protokoll | Variable setzen, Version erhöhen, Eingabe abfragen, Meldung ausgeben, Notiz, JavaScript |
 | Programme & Skripte | Shell-Befehl (bash, sh, PowerShell, cmd, Python, Node.js), Programm starten |
 | Dateien & Ordner | Kopieren, Verschieben, Löschen, Ordner erstellen, Datei schreiben, Datei lesen, Text ersetzen, ZIP erstellen, ZIP entpacken |
 | Git | Klonen, Aktualisieren, Auschecken, Commit, Tag setzen, Hochladen, Stand auslesen |
 | Build-Werkzeuge | npm / pnpm / yarn, .NET, MSBuild, Maven, Gradle, Make, CMake, Cargo, Go, Python |
 | Container | Image bauen, Image hochladen, Container starten, Docker Compose |
-| Netzwerk | HTTP-Anfrage, Datei herunterladen, Benachrichtigung (Slack, Teams, Discord, eigener Webhook) |
+| Netzwerk | HTTP-Anfrage, Datei herunterladen, E-Mail senden (SMTP mit STARTTLS oder TLS, Anhänge), Benachrichtigung (Slack, Teams, Discord, eigener Webhook) |
 
 Jede Operation kann einzeln auf «Fehler ignorieren und fortfahren» gestellt werden. Dateioperationen sind in Node.js umgesetzt und verhalten sich deshalb auf allen Plattformen gleich; Git, Build-Werkzeuge und Docker rufen die jeweiligen Kommandozeilenprogramme auf, die installiert sein müssen.
 
@@ -83,9 +85,15 @@ buildwerk list                                     # alle Operationen
 
 `buildwerk` steht hier für `node buildwerk/bin/buildwerk.js`. Der Exit-Code ist 0 bei Erfolg, 1 bei einem Fehler und 130 nach einem Abbruch. Variablen lassen sich auch über die Umgebung setzen: `BW_VAR_CONFIG=Debug`.
 
+## Rückfragen
+
+Ein Makro kann nachfragen: nach Startwerten (siehe «Abfragen» bei den Variablen), mit «Eingabe abfragen» nach einem Wert mitten im Lauf und mit «Bestätigung einholen» nach einem Ja oder Nein, etwa vor einer Veröffentlichung. Im Editor erscheint dafür ein Dialog, auf der Kommandozeile wird im Terminal gefragt.
+
+Ist niemand da, der antworten könnte – in CI, bei umgeleiteter Eingabe oder mit `--no-input` –, gelten die Vorgabewerte. «Bestätigung einholen» fährt dann je nach Einstellung fort oder bricht ab.
+
 ## GitHub Actions
 
-«Export» erzeugt einen Workflow, der das Makro bei jedem Push und auf Knopfdruck über die Kommandozeile ausführt. Nicht geheime Variablen werden zu Eingabefeldern des manuellen Starts, geheime Variablen kommen aus den gleichnamigen Repository-Secrets. Alle Werte gelangen über Umgebungsvariablen ins Makro, nie über die Befehlszeile.
+«Export» erzeugt einen Workflow, der das Makro bei jedem Push und auf Knopfdruck über die Kommandozeile ausführt. Nicht geheime Variablen werden zu Eingabefeldern des manuellen Starts, solche mit Auswahlwerten zu Auswahllisten; geheime Variablen kommen aus den gleichnamigen Repository-Secrets. Alle Werte gelangen über Umgebungsvariablen ins Makro, nie über die Befehlszeile.
 
 ## Makrodateien
 
@@ -157,7 +165,7 @@ Makros können beliebige Programme starten. Ein Makro aus fremder Quelle sollte 
 cd buildwerk && npm test
 ```
 
-Die Tests decken die Ausführungs-Engine, Dateioperationen und ZIP, Git, HTTP, den Export und den Server samt Zugriffsschutz ab. Für jede Werkzeug-Operation wird die zusammengebaute Befehlszeile geprüft. npm, Python, Make, CMake, Go, Cargo, Maven, Gradle und Git werden zusätzlich wirklich aufgerufen, sofern sie installiert sind; fehlt ein Werkzeug, wird sein Test übersprungen.
+Die Tests decken die Ausführungs-Engine, Rückfragen, Dateioperationen und ZIP, Git, HTTP, den E-Mail-Versand, den Export und den Server samt Zugriffsschutz ab. Für jede Werkzeug-Operation wird die zusammengebaute Befehlszeile geprüft. npm, Python, Make, CMake, Go, Cargo, Maven, Gradle und Git werden zusätzlich wirklich aufgerufen, sofern sie installiert sind; fehlt ein Werkzeug, wird sein Test übersprungen.
 
 Der Workflow `.github/workflows/buildwerk.yml` führt die Tests bei jeder Änderung unter Linux, Windows und macOS aus.
 
@@ -167,7 +175,8 @@ Version 0.1 ist ein erster, lauffähiger Stand.
 
 - Die automatischen Tests laufen in GitHub Actions unter Linux, Windows und macOS, unter Windows samt PowerShell, cmd, `.cmd`-Wrappern und dem Beenden von Prozessbäumen. Die Oberfläche im Browser wurde bisher nur unter Linux bedient; der Betrieb in GitHub Codespaces ist ungetestet.
 - Wirklich aufgerufen werden in den Tests npm, Python, Make, CMake, Go, Cargo, Maven, Gradle und Git. Für .NET, MSBuild und Docker ist nur die zusammengebaute Befehlszeile geprüft.
-- Noch nicht enthalten: E-Mail- und FTP-Versand, Windows-Spezifisches (Registry, Dienste, IIS), Eingabedialoge beim Start, Zeitplanung, verteilte Ausführung. Vieles davon geht einstweilen über «Shell-Befehl».
+- Der E-Mail-Versand ist gegen einen Testserver geprüft (Anmeldung, STARTTLS, TLS, Anhänge), aber noch nicht gegen einen echten Mail-Anbieter.
+- Noch nicht enthalten: FTP, Windows-Spezifisches (Registry, Dienste, IIS), Zeitplanung, verteilte Ausführung. Vieles davon geht einstweilen über «Shell-Befehl».
 - ZIP-Archive sind auf 4 GB begrenzt (kein ZIP64).
 - Die Oberfläche ist deutsch.
 

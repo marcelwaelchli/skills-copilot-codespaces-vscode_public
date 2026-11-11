@@ -10,13 +10,13 @@ import { catalog, SYSTEM_VARIABLES } from './catalog/index.js';
 import { BreakSignal, CancelledError, ContinueSignal, ControlSignal, OperationError, StopSignal, toOperationError } from './errors.js';
 import { globAll } from './glob.js';
 import { formatCommand, runProcess } from './process.js';
-import { VAR_NAME, contains, effectiveProps, findOp, isFieldVisible, opLabel, opTitle, substitute, walk } from './shared/model.js';
+import { VAR_NAME, contains, effectiveProps, findOp, isFieldVisible, opLabel, opTitle, parseChoices, substitute, walk } from './shared/model.js';
 import { validateMacro } from './shared/validate.js';
 import { parseKeyValues, statOrNull } from './util.js';
 
 const SYSTEM_NAMES = new Set(SYSTEM_VARIABLES.map((v) => v.name));
 const MAX_MACRO_DEPTH = 10;
-const TEXT_KEYS = ['text', 'label', 'error', 'value'];
+const TEXT_KEYS = ['text', 'label', 'error', 'value', 'message', 'title'];
 
 function pad(n) {
   return String(n).padStart(2, '0');
@@ -63,6 +63,8 @@ export class MacroRun extends EventEmitter {
    * @param {string} [options.startAt] skip everything before this operation
    * @param {string} [options.only] run just this operation (with its children)
    * @param {boolean} [options.paused] pause before the first operation
+   * @param {boolean} [options.interactive] someone is there to answer questions; the host listens
+   *   for `prompt` events and replies with `answer()`. Without it, questions fall back to defaults.
    */
   constructor(macro, options = {}) {
     super();
@@ -82,6 +84,8 @@ export class MacroRun extends EventEmitter {
       this.stepping = Boolean(options.paused);
       this.waiters = [];
       this.secretValues = new Set();
+      this.prompts = new Map();
+      this.promptCounter = 0;
     }
   }
 
@@ -90,6 +94,35 @@ export class MacroRun extends EventEmitter {
   stop() {
     this.root.abort.abort();
     this.#release(new CancelledError());
+    for (const pending of this.root.prompts.values()) pending.reject(new CancelledError());
+  }
+
+  /**
+   * Asks the person running the macro and waits for the reply. Resolves with
+   * undefined when nobody is there to answer; the caller decides the fallback.
+   * @param {object|null} exec
+   * @param {{kind: 'form'|'confirm', title?: string, message?: string, fields?: object[]}} request
+   */
+  async ask(exec, request) {
+    const root = this.root;
+    if (!root.options.interactive) return undefined;
+    this.#checkCancelled();
+    const promptId = ++root.promptCounter;
+    this.emitEvent('prompt', { promptId, opId: exec?.opId ?? null, ...request });
+    try {
+      return await new Promise((resolve, reject) => root.prompts.set(promptId, { resolve, reject }));
+    } finally {
+      root.prompts.delete(promptId);
+      this.emitEvent('prompt-answered', { promptId });
+    }
+  }
+
+  /** Delivers the reply to a pending question. Returns false when nothing is waiting for it. */
+  answer(promptId, value) {
+    const pending = this.root.prompts.get(promptId);
+    if (!pending) return false;
+    pending.resolve(value);
+    return true;
   }
 
   setBreakpoints(ids) {
@@ -285,15 +318,47 @@ export class MacroRun extends EventEmitter {
       }
     }
     const overrides = options.overrides || {};
-    for (const variable of macro.variables || []) {
+    const variables = macro.variables || [];
+    for (const variable of variables) if (variable.secret) this.secretNames.add(variable.name);
+
+    // Start value of a variable. Called in declaration order, so a default can build on earlier variables.
+    const startValue = (variable, answers) => {
       const { name } = variable;
-      if (variable.secret) this.secretNames.add(name);
-      let value;
-      if (name in overrides) value = overrides[name];
-      else if (variable.persistent && name in persisted) value = persisted[name];
-      else if (variable.secret && !variable.value && process.env[name] !== undefined) value = process.env[name];
-      else value = this.substStrict(variable.value ?? '', `Standardwert von «${name}»`);
-      this.setVar(name, value);
+      if (name in overrides) return overrides[name];
+      if (name in answers) return answers[name];
+      if (variable.persistent && name in persisted) return persisted[name];
+      if (variable.secret && !variable.value && process.env[name] !== undefined) return process.env[name];
+      return this.substStrict(variable.value ?? '', `Standardwert von «${name}»`);
+    };
+
+    // Variables marked «beim Start abfragen» are asked for in one form, unless a value was passed in.
+    const answers = {};
+    const asked = variables.filter((variable) => variable.prompt && !(variable.name in overrides));
+    if (asked.length && this.root.options.interactive) {
+      // A first, silent pass only to learn which values to offer as defaults.
+      for (const variable of variables) this.vars.set(variable.name, String(startValue(variable, answers) ?? ''));
+      const fields = asked.map((variable) => ({
+        name: variable.name,
+        label: variable.description || variable.name,
+        default: variable.secret ? '' : this.vars.get(variable.name),
+        choices: parseChoices(variable.choices),
+        secret: Boolean(variable.secret),
+      }));
+      const reply = (await this.ask(null, { kind: 'form', title: macro.name || 'Makro', message: 'Mit welchen Werten soll das Makro laufen?', fields })) || {};
+      for (const field of fields) {
+        const value = reply[field.name];
+        // Leaving a hidden field empty keeps the value it already has.
+        if (value !== undefined && !(field.secret && value === '')) answers[field.name] = String(value);
+      }
+    }
+
+    for (const variable of variables) {
+      const value = String(startValue(variable, answers) ?? '');
+      const choices = parseChoices(variable.choices);
+      if (choices.length && !choices.includes(value)) {
+        throw new OperationError(`«${value}» ist kein erlaubter Wert für «${variable.name}» (erlaubt: ${choices.join(', ')}).`);
+      }
+      this.setVar(variable.name, value);
     }
     for (const [name, value] of Object.entries(overrides)) {
       if (!this.vars.has(name)) this.setVar(name, value);
@@ -642,9 +707,14 @@ export class MacroRun extends EventEmitter {
       path: (file) => run.resolvePath(file),
       vars: {
         get: (name) => run.getVar(name),
-        set: (name, value) => run.setVar(name, value),
+        /** `secret` hides the value in the log from now on. */
+        set: (name, value, { secret = false } = {}) => {
+          if (secret) run.secretNames.add(name);
+          run.setVar(name, value);
+        },
         all: () => Object.fromEntries(run.vars),
       },
+      ask: (request) => run.ask(exec, request),
       processOptions: (p) => ({ cwd: p.cwd, env: parseKeyValues(p.env), timeoutSec: p.timeout }),
       exec: (cmd, args, options) => run.#execProcess(exec, cmd, args, options),
     };

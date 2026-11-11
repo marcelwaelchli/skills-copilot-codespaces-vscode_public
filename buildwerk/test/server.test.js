@@ -156,6 +156,33 @@ test('a run can be paused at a breakpoint, stepped and stopped; only one run at 
   assert.equal((await request('GET', '/api/runs/abcdef/events')).status, 404);
 });
 
+test('a question from the macro reaches the client and is answered through the control endpoint', async () => {
+  const operations = [op('var.prompt', { message: 'Welche Version?', variable: 'V', default: '1.0' }), log('v${V}')];
+  const started = await request('POST', '/api/runs', { body: { macro: macro(operations) } });
+  const runId = started.json.runId;
+
+  // The run waits; the question is in the event stream for whoever connects.
+  let prompt;
+  for (let i = 0; i < 100 && !prompt; i++) {
+    const res = await fetch(`${server.url}/api/runs/${runId}/events?token=${server.token}`);
+    const reader = res.body.getReader();
+    const { value } = await reader.read();
+    await reader.cancel();
+    const frames = new TextDecoder().decode(value).split('\n\n').filter((frame) => frame.startsWith('data: '));
+    prompt = frames.map((frame) => JSON.parse(frame.slice(6))).find((event) => event.type === 'prompt');
+    if (!prompt) await new Promise((resolve) => setTimeout(resolve, 20));
+  }
+  assert.equal(prompt.message, 'Welche Version?');
+  assert.equal(prompt.fields[0].default, '1.0');
+
+  const answer = (value) => request('POST', `/api/runs/${runId}/control`, { body: { answer: { promptId: prompt.promptId, value } } });
+  assert.equal((await answer({ V: '3.1' })).status, 200);
+  const events = await collectEvents(runId);
+  assert.equal(events.at(-1).status, 'success');
+  assert.ok(events.some((event) => event.type === 'output' && event.text === 'v3.1'));
+  assert.equal((await answer({ V: 'zu spät' })).status, 409);
+});
+
 test('workflow export only writes below .github/workflows', async () => {
   const ok = await request('POST', '/api/export/save', { body: { path: '.github/workflows/build.yml', content: 'name: x\n' } });
   assert.equal(ok.status, 200);

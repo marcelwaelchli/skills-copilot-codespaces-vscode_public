@@ -2,7 +2,8 @@
 
 import { createRequire } from 'node:module';
 import path from 'node:path';
-import { area, code, select, text, variable } from './fields.js';
+import { parseChoices } from '../shared/model.js';
+import { area, check, code, select, text, variable } from './fields.js';
 
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 
@@ -47,6 +48,34 @@ export default [
       for (let i = index + 1; i < parts.length; i++) parts[i] = '0';
       ctx.vars.set(p.name, parts.join('.'));
       ctx.log(`${p.name}: ${current} → ${parts.join('.')}`);
+    },
+  },
+  {
+    type: 'var.prompt',
+    category: 'vars',
+    label: 'Eingabe abfragen',
+    icon: 'edit',
+    description:
+      'Hält das Makro an und fragt nach einem Wert. Läuft das Makro ohne Bedienung, etwa in CI, wird der Vorgabewert verwendet.',
+    fields: [
+      text('message', 'Frage', { required: true, placeholder: 'Welche Version soll veröffentlicht werden?' }),
+      variable('variable', 'Antwort in Variable speichern', { required: true }),
+      text('default', 'Vorgabewert'),
+      text('choices', 'Auswahlwerte', { placeholder: 'freie Eingabe', hint: 'Durch Komma getrennt, z. B. Debug, Release. Leer = freie Eingabe.' }),
+      check('secret', 'Eingabe verbergen', { hint: 'Für Passwörter: Der Wert erscheint weder beim Tippen noch im Protokoll.' }),
+    ],
+    summary: '{variable}: {message}',
+    plainLogLabel: true,
+    async run(ctx, p) {
+      const choices = parseChoices(p.choices);
+      const field = { name: p.variable, label: p.variable, default: p.secret ? '' : p.default ?? '', choices, secret: p.secret };
+      const reply = await ctx.ask({ kind: 'form', title: 'Eingabe', message: p.message, fields: [field] });
+      let value = p.default ?? '';
+      if (reply === undefined) ctx.log('Niemand da, der antworten könnte – der Vorgabewert wird verwendet.');
+      else if (!(p.secret && reply[p.variable] === '')) value = String(reply[p.variable] ?? '');
+      if (choices.length && !choices.includes(value)) ctx.fail(`«${value}» ist kein erlaubter Wert (erlaubt: ${choices.join(', ')}).`);
+      ctx.vars.set(p.variable, value, { secret: p.secret });
+      ctx.log(`${p.variable} = ${p.secret ? '***' : value}`);
     },
   },
   {

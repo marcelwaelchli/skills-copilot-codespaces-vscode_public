@@ -7,6 +7,7 @@ import { mountBottom } from './bottom.js';
 import { append, button, clear, h, storageGet, storageSet, throttleFrame } from './dom.js';
 import { icon } from './icons.js';
 import { mountPalette } from './palette.js';
+import { mountPrompts } from './prompts.js';
 import { mountProps } from './props.js';
 import * as runner from './runner.js';
 import {
@@ -142,7 +143,8 @@ function renderStatus() {
   const { phase, status, currentLabel, durationMs } = state.run;
   let kind = 'idle';
   let text = 'Bereit';
-  if (phase === 'running') [kind, text] = ['running', currentLabel ? `Läuft: ${currentLabel}` : 'Läuft …'];
+  if (phase === 'running' && state.run.waitingForInput) [kind, text] = ['paused', 'Wartet auf deine Eingabe'];
+  else if (phase === 'running') [kind, text] = ['running', currentLabel ? `Läuft: ${currentLabel}` : 'Läuft …'];
   else if (phase === 'paused') [kind, text] = ['paused', 'Angehalten – F5 setzt fort, F10 führt einen Schritt aus'];
   else if (phase === 'done' && status === 'success') [kind, text] = ['success', `Erfolgreich in ${formatDuration(durationMs)}`];
   else if (phase === 'done' && status === 'cancelled') [kind, text] = ['paused', 'Abgebrochen'];
@@ -234,6 +236,7 @@ async function main() {
   const tree = mountEditor();
   mountProps($('#props'));
   mountBottom($('#bottom'));
+  mountPrompts();
   setupSplitters();
   setupShortcuts(tree);
 

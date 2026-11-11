@@ -31,6 +31,8 @@ export function mountVariables(root) {
       h('td', null, text('name', { class: 'input mono', placeholder: 'NAME' })),
       h('td', null, text('value', { class: 'input mono', type: variable.secret ? 'password' : 'text', placeholder: variable.secret ? 'aus Umgebungsvariable' : '' })),
       h('td', null, text('description')),
+      h('td', null, text('choices', { class: 'input mono', placeholder: 'frei' })),
+      h('td', { class: 'center' }, flag('prompt', 'Abfragen: Beim Start nach dem Wert fragen')),
       h('td', { class: 'center' }, flag('secret', 'Geheim: Wert wird im Protokoll verborgen')),
       h('td', { class: 'center' }, flag('persistent', 'Persistent: Wert bleibt zwischen den Läufen erhalten')),
       h('td', null, h('button', { type: 'button', class: 'btn ghost icon-only', title: 'Variable löschen', onclick: () => mutate((macro) => macro.variables.splice(index, 1)) }, icon('trash', 15))),
@@ -47,7 +49,7 @@ export function mountVariables(root) {
         ? h(
             'table',
             { class: 'vars-table' },
-            h('thead', null, h('tr', null, h('th', null, 'Name'), h('th', null, 'Standardwert'), h('th', null, 'Beschreibung'), h('th', { class: 'center', title: 'Wert wird im Protokoll verborgen' }, 'Geheim'), h('th', { class: 'center', title: 'Wert bleibt zwischen den Läufen erhalten' }, 'Persistent'), h('th', null))),
+            h('thead', null, h('tr', null, h('th', null, 'Name'), h('th', null, 'Standardwert'), h('th', null, 'Beschreibung'), h('th', { title: 'Erlaubte Werte, durch Komma getrennt' }, 'Auswahlwerte'), h('th', { class: 'center', title: 'Beim Start nach dem Wert fragen' }, 'Abfragen'), h('th', { class: 'center', title: 'Wert wird im Protokoll verborgen' }, 'Geheim'), h('th', { class: 'center', title: 'Wert bleibt zwischen den Läufen erhalten' }, 'Persistent'), h('th', null))),
             h('tbody', null, variables.map(row)),
           )
         : h('p', { class: 'empty-note' }, 'Dieses Makro hat noch keine Variablen. Variablen werden überall als ${NAME} eingesetzt und stehen Skripten als Umgebungsvariablen zur Verfügung.'),
@@ -65,6 +67,8 @@ export function mountVariables(root) {
       h(
         'ul',
         { class: 'vars-help' },
+        h('li', null, h('strong', null, 'Auswahlwerte: '), 'Durch Komma getrennt, zum Beispiel Debug, Release. Dann sind nur diese Werte erlaubt, und beim Abfragen erscheint eine Auswahlliste.'),
+        h('li', null, h('strong', null, 'Abfragen: '), 'Beim Start fragt Buildwerk nach dem Wert und schlägt den Standardwert vor. Läuft das Makro ohne Bedienung, etwa in CI, gilt der Standardwert.'),
         h('li', null, h('strong', null, 'Geheim: '), 'Der Wert erscheint im Protokoll als ***. Bleibt der Standardwert leer, wird die gleichnamige Umgebungsvariable verwendet – so landet kein Passwort in der Makrodatei.'),
         h('li', null, h('strong', null, 'Persistent: '), 'Der Wert am Ende eines Laufs ist der Startwert des nächsten, etwa für eine fortlaufende Build-Nummer. Gespeichert wird er neben dem Makro in einer .state.json-Datei.'),
       ),

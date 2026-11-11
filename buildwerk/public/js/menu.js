@@ -76,10 +76,12 @@ window.addEventListener('blur', closeMenu);
  * @param {{label: string, value?: any, primary?: boolean, danger?: boolean, keepOpen?: boolean, onClick?: (dialog: HTMLDialogElement) => any}[]} [options.buttons]
  * @param {string} [options.width]
  */
-export function openDialog({ title, body, buttons = [], width }) {
+export function openDialog({ title, body, buttons = [], width, onCreate }) {
   return new Promise((resolve) => {
     const dialog = h('dialog', { class: 'dialog' });
     if (width) dialog.style.width = width;
+    // Lets the caller close the dialog from outside: dialog.close_(value).
+    queueMicrotask(() => onCreate?.(dialog));
     let result = null;
     const close = (value) => {
       result = value;
@@ -96,8 +98,10 @@ export function openDialog({ title, body, buttons = [], width }) {
             class: `btn ${spec.primary ? 'primary' : ''} ${spec.danger ? 'danger' : ''}`,
             dataset: spec.primary ? { default: 'true' } : {},
             onclick: async () => {
-              const value = spec.onClick ? await spec.onClick(dialog) : spec.value;
-              if (!spec.keepOpen && value !== false) close(value ?? spec.value ?? true);
+              if (!spec.onClick) return close(spec.value === undefined ? true : spec.value);
+              // A handler keeps the dialog open by returning false (e.g. when saving failed).
+              const outcome = await spec.onClick(dialog);
+              if (!spec.keepOpen && outcome !== false) close(outcome ?? spec.value ?? true);
             },
           },
           spec.label,

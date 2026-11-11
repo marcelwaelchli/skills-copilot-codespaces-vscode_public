@@ -10,7 +10,7 @@
   },
   "scripts": {
     "start": "node bin/buildwerk.js serve",
-    "test": "node --test test/engine.test.js test/files.test.js test/tools.test.js test/server.test.js test/commands.test.js test/realtools.test.js"
+    "test": "node --test test/engine.test.js test/files.test.js test/tools.test.js test/server.test.js test/commands.test.js test/realtools.test.js test/prompts.test.js test/mail.test.js"
   },
   "engines": {
     "node": ">=20.3"

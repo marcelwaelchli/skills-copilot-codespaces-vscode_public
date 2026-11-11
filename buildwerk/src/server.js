@@ -212,6 +212,8 @@ export async function startServer({ port = 4800, host = '127.0.0.1', workspace =
         startAt: body.startAt || undefined,
         only: body.only || undefined,
         paused: Boolean(body.paused),
+        // Questions go to the editor as `prompt` events and come back through the control endpoint.
+        interactive: true,
       });
       const record = { run, path: body.path || null, events: [], subscribers: new Set(), done: false, stored: 0 };
       runs.set(run.id, record);
@@ -294,6 +296,9 @@ export async function startServer({ port = 4800, host = '127.0.0.1', workspace =
       return readJson(req).then((body) => {
         const { run } = record;
         if (Array.isArray(body.breakpoints)) run.setBreakpoints(body.breakpoints);
+        if (body.answer && !run.answer(body.answer.promptId, body.answer.value)) {
+          throw new HttpError(409, 'Diese Frage wartet nicht mehr auf eine Antwort.');
+        }
         if (body.action === 'stop') run.stop();
         else if (body.action === 'pause') run.pause();
         else if (body.action === 'resume') run.resume();
