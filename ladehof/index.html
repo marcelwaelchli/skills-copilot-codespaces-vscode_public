@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ladehof</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: the yard seen from above sits in the middle with the delivery ramp
+   (three groups) right below it; counters on the left, re-dispatch and rules on
+   the right. On a phone: counter strip, then yard and ramp. */
+:root {
+  color-scheme: light;
+  --bg: #e6ecef;
+  --panel: #f4f7f9;
+  --ink: #13273b;
+  --muted: #566879;
+  --line: #b4c2cc;
+  --yard: #d8e1e7;
+  --grid: #c6d1d9;
+  --accent: #c4480f;
+  --accent-ink: #ffffff;
+  --eil: #ffffff;
+  --eil-ink: #13273b;
+  --lite: rgba(255, 255, 255, 0.26);
+  --shade: rgba(0, 0, 0, 0.22);
+  --c1: #a23f2c;
+  --c2: #2a5ca6;
+  --c3: #cfa22b;
+  --c4: #2e7955;
+  --font-display: "Saira Stencil One", "Barlow", "Arial Narrow", Impact, sans-serif;
+  --font-body: "Barlow", "Helvetica Neue", Arial, sans-serif;
+  --font-data: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0d1721;
+    --panel: #15222e;
+    --ink: #dde7ee;
+    --muted: #8698a8;
+    --line: #2d4152;
+    --yard: #09121a;
+    --grid: #172633;
+    --accent: #ff7d3c;
+    --accent-ink: #1c0d04;
+    --c1: #bd513c;
+    --c2: #3f77c9;
+    --c3: #dcb443;
+    --c4: #3f9a6e;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d1721;
+  --panel: #15222e;
+  --ink: #dde7ee;
+  --muted: #8698a8;
+  --line: #2d4152;
+  --yard: #09121a;
+  --grid: #172633;
+  --accent: #ff7d3c;
+  --accent-ink: #1c0d04;
+  --c1: #bd513c;
+  --c2: #3f77c9;
+  --c3: #dcb443;
+  --c4: #3f9a6e;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { height: 100%; }
+body {
+  height: 100%;
+  margin: 0;
+  padding-block: 16px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 15px/1.45 var(--font-body);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+}
+h1, h2, p, dl, dd, ul { margin: 0; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.app {
+  height: 100%;
+  min-height: 460px;
+  max-width: 1040px;
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr) 200px;
+  grid-template-rows: minmax(0, 1fr);
+  grid-template-areas: "a stage b";
+  column-gap: 24px;
+}
+.col { display: flex; flex-direction: column; gap: 22px; min-width: 0; }
+.col-a { grid-area: a; }
+.col-b { grid-area: b; }
+
+.label {
+  font: 600 11px/1.2 var(--font-body);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.eyebrow {
+  font: 500 11px/1.2 var(--font-data);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.brand h1 {
+  font: 400 40px/0.95 var(--font-display);
+  letter-spacing: 0.01em;
+  margin-top: 8px;
+}
+
+.stats { border-top: 2px solid var(--ink); }
+.stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+.stat dd {
+  font: 600 17px/1.1 var(--font-data);
+  font-variant-numeric: tabular-nums;
+}
+.stat-main { flex-direction: column; align-items: flex-start; gap: 6px; padding: 12px 0; }
+.stat-main dd { font: 400 44px/0.9 var(--font-display); letter-spacing: 0.01em; }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; }
+.btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1.5px solid var(--ink);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--ink);
+  padding: 8px 12px;
+  font: 600 12px/1.2 var(--font-body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.btn:hover:not(:disabled) { background: color-mix(in srgb, var(--ink) 9%, transparent); }
+.btn svg { flex: none; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); padding: 11px 16px; font-size: 13px; }
+.btn-primary:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 86%, var(--ink)); }
+#btnSound[aria-pressed="true"] .off, #btnSound[aria-pressed="false"] .on { display: none; }
+
+.stage {
+  grid-area: stage;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#yard { display: block; touch-action: none; user-select: none; -webkit-user-select: none; }
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 14% 12px 12px;
+  background: color-mix(in srgb, var(--bg) 62%, transparent);
+}
+.card {
+  width: min(320px, 100%);
+  background: var(--panel);
+  border: 2px solid var(--ink);
+  display: grid;
+  gap: 10px;
+  padding: 0 18px 18px;
+}
+.card::before {
+  content: "";
+  height: 8px;
+  margin: 0 -18px 8px;
+  background: repeating-linear-gradient(-45deg, var(--accent) 0 9px, var(--ink) 9px 18px);
+}
+.card h2 { font: 400 30px/1 var(--font-display); text-wrap: balance; }
+.card p { font-size: 15px; }
+.card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.card-extra { display: contents; }
+
+.swap { display: grid; gap: 8px; }
+.swap-row { display: grid; gap: 10px; }
+.swap-btn {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: 1.5px solid var(--accent);
+  border-radius: 3px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  padding: 10px 12px;
+  font: 600 12px/1.2 var(--font-body);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.swap-btn:disabled { background: transparent; border-color: var(--line); color: var(--muted); cursor: default; }
+.swap-count { margin-left: auto; font: 600 15px/1 var(--font-data); text-transform: none; letter-spacing: 0; }
+.pips-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.pips { display: flex; gap: 9px; padding: 3px; }
+.pips i, .raute {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  transform: rotate(45deg);
+  border: 1.5px solid var(--muted);
+}
+.pips i.on { background: var(--accent); border-color: var(--accent); }
+.raute { margin: 0 3px; border-color: var(--ink); background: var(--eil); box-shadow: inset 0 0 0 2px var(--accent); }
+.note, .rules li { font-size: 13px; line-height: 1.4; color: var(--muted); }
+.rules { display: grid; gap: 8px; }
+.rules ul { padding: 0; list-style: none; display: grid; gap: 7px; }
+.legend { display: grid; gap: 8px; }
+.keys { display: grid; gap: 5px; }
+.keys div { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.keys dt { display: flex; gap: 4px; }
+.keys dd { font-size: 13px; color: var(--muted); }
+kbd {
+  display: inline-block;
+  min-width: 22px;
+  padding: 1px 5px;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  background: var(--panel);
+  font: 500 11px/1.5 var(--font-data);
+  text-align: center;
+}
+
+@media (pointer: coarse) { .legend { display: none; } }
+@media (max-height: 620px) { .legend { display: none; } }
+@media (max-height: 500px) { .rules { display: none; } }
+
+@media (max-width: 720px) {
+  body { padding-block: 10px; }
+  .app {
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-areas: "a b" "stage stage";
+    column-gap: 12px;
+    row-gap: 10px;
+  }
+  .brand, .legend, .rules, .note, .col-b .label, .stat-best, .stat-lines, .swap-label, .btn span { display: none; }
+  .col { flex-direction: row; align-items: center; gap: 10px; }
+  .stats { display: flex; gap: 14px; flex: 1; border: 0; min-width: 0; }
+  .stat { flex-direction: column; align-items: flex-start; gap: 3px; padding: 0; border: 0; }
+  .stat .label { font-size: 10px; letter-spacing: 0.1em; }
+  .stat dd { font-size: 20px; line-height: 26px; }
+  .stat-main dd { font-size: 28px; line-height: 26px; }
+  .actions { margin: 0; flex-wrap: nowrap; }
+  .actions .btn { padding: 10px; }
+  .swap-row { justify-items: center; gap: 6px; }
+  .swap-btn { width: auto; padding: 8px 10px; gap: 8px; }
+  .pips { gap: 7px; padding: 2px; }
+  .pips i { width: 7px; height: 7px; }
+  .overlay { padding-top: 22%; }
+  .card h2 { font-size: 26px; }
+  .card p { font-size: 14px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .swap-btn.urgent { animation: urgent 0.9s ease-in-out infinite; }
+  @keyframes urgent { 50% { transform: scale(1.06); } }
+}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <aside class="col col-a">
+    <header class="brand">
+      <p class="eyebrow">Terminal Lückenlos · Hof 3</p>
+      <h1>Ladehof</h1>
+    </header>
+    <dl class="stats">
+      <div class="stat stat-main"><dt class="label">TEU abgefertigt</dt><dd id="teu">0</dd></div>
+      <div class="stat stat-streak"><dt class="label">Serie</dt><dd id="streak">0</dd></div>
+      <div class="stat stat-lines"><dt class="label">Züge</dt><dd id="lines">0</dd></div>
+      <div class="stat stat-best"><dt class="label">Rekord</dt><dd id="best">0</dd></div>
+    </dl>
+    <div class="actions">
+      <button class="btn" id="btnNew" type="button" aria-label="Neue Schicht">
+        <svg width="13" height="13" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12a7 7 0 1 1-2.5-5.4M19 4v5h-5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>Neu</span>
+      </button>
+      <button class="btn" id="btnSound" type="button" aria-pressed="true" aria-label="Ton">
+        <svg width="15" height="12" viewBox="0 0 15 12" aria-hidden="true"><path d="M1 4h2.5L7 1v10L3.5 8H1z" fill="currentColor"/><path class="on" d="M9.5 3.5a3.5 3.5 0 0 1 0 5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path class="off" d="M10 4l4 4M14 4l-4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        <span id="soundText">Ton an</span>
+      </button>
+    </div>
+  </aside>
+
+  <main class="stage" id="stage">
+    <canvas id="yard" role="img" aria-label="Ladehof: 8 Gassen breit, 10 Reihen tief, darunter die Rampe mit drei Gruppen"></canvas>
+    <div class="overlay" id="overlay" hidden>
+      <div class="card" role="dialog" aria-labelledby="ovTitle">
+        <p class="eyebrow" id="ovEyebrow"></p>
+        <h2 id="ovTitle"></h2>
+        <p id="ovText"></p>
+        <div class="card-actions">
+          <button class="btn btn-primary" id="ovPrimary" type="button"></button>
+          <span id="ovExtra" class="card-extra"></span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="col col-b">
+    <section class="swap">
+      <h2 class="label">Umdisponieren</h2>
+      <div class="swap-row">
+        <button class="swap-btn" id="btnSwap" type="button" aria-label="Umdisponieren: neue Lieferung">
+          <svg width="22" height="16" viewBox="0 0 22 16" aria-hidden="true"><path d="M1 5h17l-3.5-3.5M21 11H4l3.5 3.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="swap-label">Neue Lieferung</span>
+          <span class="swap-count"><span id="swapCount">1</span>×</span>
+        </button>
+        <div class="pips-row">
+          <span class="label">Eilgut</span>
+          <div class="pips" id="pips" role="img" aria-label="Eilgut 0 von 4"><i></i><i></i><i></i><i></i></div>
+        </div>
+      </div>
+      <p class="note">Abgefertigtes Eilgut <i class="raute"></i> lädt das Umdisponieren. Es tauscht die Gruppen an der Rampe.</p>
+    </section>
+    <section class="rules">
+      <h2 class="label">Regeln</h2>
+      <ul>
+        <li>Eine volle Reihe oder Gasse fährt als Zug ab.</li>
+        <li>Mehrere Züge auf einmal und Serien zählen mehrfach.</li>
+        <li>Ein Zug in nur einer Farbe ist ein Ganzzug und zählt dreifach.</li>
+      </ul>
+    </section>
+    <section class="legend">
+      <h2 class="label">Tastatur</h2>
+      <dl class="keys">
+        <div><dt><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd></dt><dd>Gruppe wählen</dd></div>
+        <div><dt><kbd>←</kbd><kbd>↑</kbd><kbd>↓</kbd><kbd>→</kbd></dt><dd>Bewegen</dd></div>
+        <div><dt><kbd>Enter</kbd></dt><dd>Absetzen</dd></div>
+        <div><dt><kbd>U</kbd></dt><dd>Umdisponieren</dd></div>
+      </dl>
+    </section>
+  </aside>
+</div>
+<p class="sr" id="live" aria-live="polite"></p>
+
+<script>
+(() => {
+  'use strict';
+  document.documentElement.lang = 'de';
+
+  // ---- rules ---------------------------------------------------------------
+  const COLS = 8, ROWS = 10, EIL = 8;              // EIL flags an express container; colours are 1..4
+  const EIL_CHANCE = 0.25, EIL_PER_CHARGE = 4, MAX_CHARGES = 2;
+  const GANZZUG = 3, CLEAR_YARD = 50;              // one-colour train counts threefold; bonus for an empty yard
+  const NAMES = ['', 'Zug', 'Doppelzug', 'Dreifachzug', 'Hochbetrieb'];
+
+  // Groups as they arrive at the ramp. Each is dealt in a random turn but cannot be turned by hand.
+  const BASE = [
+    { w: 2, m: ['X'] },
+    { w: 3, m: ['XX'] },
+    { w: 4, m: ['XXX'] },
+    { w: 3, m: ['XXXX'] },
+    { w: 2, m: ['XXXXX'] },
+    { w: 4, m: ['XX', 'XX'] },
+    { w: 4, m: ['X.', 'XX'] },
+    { w: 3, m: ['X.', 'X.', 'XX'] },
+    { w: 3, m: ['.X', '.X', 'XX'] },
+    { w: 3, m: ['XXX', '.X.'] },
+    { w: 2, m: ['.XX', 'XX.'] },
+    { w: 2, m: ['XX.', '.XX'] },
+    { w: 2, m: ['X..', 'X..', 'XXX'] },
+    { w: 2, m: ['XXX', 'XXX'] },
+    { w: 1, m: ['XXX', 'XXX', 'XXX'] },
+  ];
+  const turn = (m) => Array.from({ length: m[0].length }, (_, j) => Array.from({ length: m.length }, (_, i) => m[m.length - 1 - i][j]));
+  const SHAPES = BASE.map((b) => {
+    const forms = [], seen = new Set();
+    let m = b.m.map((row) => [...row].map((chr) => (chr === 'X' ? 1 : 0)));
+    for (let k = 0; k < 4; k++) {
+      const key = m.map((r) => r.join('')).join('/');
+      if (!seen.has(key)) { seen.add(key); forms.push(m); }
+      m = turn(m);
+    }
+    return { w: b.w, forms, size: forms[0].flat().filter(Boolean).length };
+  });
+  const TOTAL_W = SHAPES.reduce((s, x) => s + x.w, 0);
+
+  // ---- helpers -------------------------------------------------------------
+  const $ = (id) => document.getElementById(id);
+  const els = {
+    stage: $('stage'), yard: $('yard'), overlay: $('overlay'), live: $('live'),
+    ovEyebrow: $('ovEyebrow'), ovTitle: $('ovTitle'), ovText: $('ovText'), ovPrimary: $('ovPrimary'), ovExtra: $('ovExtra'),
+    teu: $('teu'), best: $('best'), streak: $('streak'), lines: $('lines'),
+    btnNew: $('btnNew'), btnSound: $('btnSound'), soundText: $('soundText'), btnSwap: $('btnSwap'), swapCount: $('swapCount'), pips: $('pips'),
+  };
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* storage is optional */ } },
+  };
+  const fmt = (n) => n.toLocaleString();
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---- sound ---------------------------------------------------------------
+  const sfx = (() => {
+    let ac = null, on = store.get('ladehof.ton') !== '0';
+    const ctx = () => {
+      if (!on) return null;
+      try {
+        if (!ac) {
+          const A = window.AudioContext || window.webkitAudioContext;
+          if (!A) return null;
+          ac = new A();
+        }
+        if (ac.state === 'suspended') ac.resume();
+        return ac;
+      } catch (e) { return null; }
+    };
+    function tone(f, d, type, vol, delay, f2) {
+      const a = ctx(); if (!a) return;
+      const t = a.currentTime + (delay || 0), o = a.createOscillator(), g = a.createGain();
+      o.type = type; o.frequency.setValueAtTime(f, t);
+      if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + d + 0.03);
+    }
+    function noise(d, vol, f1, f2) {
+      const a = ctx(); if (!a) return;
+      const n = Math.floor(a.sampleRate * d), buf = a.createBuffer(1, n, a.sampleRate), chn = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) chn[i] = Math.random() * 2 - 1;
+      const src = a.createBufferSource(), flt = a.createBiquadFilter(), g = a.createGain(), t = a.currentTime;
+      src.buffer = buf; flt.type = 'lowpass';
+      flt.frequency.setValueAtTime(f1, t); flt.frequency.exponentialRampToValueAtTime(f2, t + d);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + d * 0.3);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      src.connect(flt); flt.connect(g); g.connect(a.destination); src.start(t);
+    }
+    return {
+      get on() { return on; },
+      toggle() { on = !on; store.set('ladehof.ton', on ? '1' : '0'); if (on) tone(660, 0.09, 'triangle', 0.06); return on; },
+      unlock() { ctx(); },
+      place() { tone(130, 0.12, 'sine', 0.17, 0, 72); },
+      clear(n) { const f = [392, 494, 587, 740, 880]; for (let i = 0; i < Math.min(n, 5); i++) tone(f[i], 0.18, 'triangle', 0.08, i * 0.07); noise(0.4, 0.04, 500, 1800); },
+      swap() { noise(0.35, 0.1, 400, 1600); },
+      over() { tone(220, 0.6, 'sawtooth', 0.06, 0, 98); },
+    };
+  })();
+
+  // ---- game state ----------------------------------------------------------
+  let G = null;
+  let best = Number(store.get('ladehof.rekord')) || 0;
+  let sel = null;               // keyboard or tap selection: { idx, r, c }
+  let drag = null;              // pointer drag: { idx, id, x, y, x0, y0, touch, moved }
+  let primaryFn = null;
+  const fx = { pops: [], depart: [], flash: null };
+  const DEPART = reduceMotion ? 160 : 480;
+
+  function randomPiece(small) {
+    let s;
+    do {
+      let t = Math.random() * TOTAL_W;
+      s = SHAPES.find((x) => (t -= x.w) < 0) || SHAPES[0];
+    } while (small && s.size > 4);
+    const m = s.forms[Math.floor(Math.random() * s.forms.length)].map((r) => r.slice());
+    if (!small && Math.random() < EIL_CHANCE) {
+      const cells = [];
+      m.forEach((row, i) => row.forEach((v, j) => { if (v) cells.push([i, j]); }));
+      const [i, j] = cells[Math.floor(Math.random() * cells.length)];
+      m[i][j] = 2;
+    }
+    return { m, color: 1 + Math.floor(Math.random() * 4) };
+  }
+  function fits(m, r, c) {
+    if (r < 0 || c < 0 || r + m.length > ROWS || c + m[0].length > COLS) return false;
+    for (let i = 0; i < m.length; i++) for (let j = 0; j < m[0].length; j++) if (m[i][j] && G.grid[r + i][c + j]) return false;
+    return true;
+  }
+  function anyFit(m) {
+    for (let r = 0; r <= ROWS - m.length; r++) for (let c = 0; c <= COLS - m[0].length; c++) if (fits(m, r, c)) return true;
+    return false;
+  }
+  // A new delivery always holds at least one group that still has room.
+  function deal() {
+    for (let k = 0; k < 40; k++) {
+      const t = [randomPiece(), randomPiece(), randomPiece()];
+      if (t.some((p) => anyFit(p.m))) { G.tray = t; return; }
+    }
+    G.tray = [{ m: [[1]], color: 1 + Math.floor(Math.random() * 4) }, randomPiece(), randomPiece()];
+  }
+  function fresh() {
+    return { grid: Array.from({ length: ROWS }, () => Array(COLS).fill(0)), tray: [null, null, null],
+             teu: 0, lines: 0, streak: 0, misses: 0, eil: 0, charges: 1, moves: 0, over: false, stuck: false, bestBefore: best };
+  }
+  function newGame() {
+    G = fresh();
+    // the yard is never empty at the start of a shift
+    let placed = 0, tries = 0;
+    while (placed < 5 && tries++ < 300) {
+      const p = randomPiece(true);
+      const r = Math.floor(Math.random() * (ROWS - p.m.length + 1)), c = Math.floor(Math.random() * (COLS - p.m[0].length + 1));
+      if (!fits(p.m, r, c)) continue;
+      p.m.forEach((row, i) => row.forEach((v, j) => { if (v) G.grid[r + i][c + j] = p.color; }));
+      placed++;
+    }
+    deal();
+    sel = null; drag = null;
+    fx.pops = []; fx.depart = []; fx.flash = null;
+    showOverlay(null);
+    settle(true);
+  }
+  function convertEil() {
+    while (G.eil >= EIL_PER_CHARGE && G.charges < MAX_CHARGES) { G.eil -= EIL_PER_CHARGE; G.charges++; }
+    G.eil = Math.min(G.eil, EIL_PER_CHARGE);
+  }
+  function fullLines(grid) {
+    const rows = [], cols = [];
+    for (let y = 0; y < ROWS; y++) if (grid[y].every(Boolean)) rows.push(y);
+    for (let x = 0; x < COLS; x++) {
+      let full = true;
+      for (let y = 0; y < ROWS; y++) if (!grid[y][x]) { full = false; break; }
+      if (full) cols.push(x);
+    }
+    return { rows, cols };
+  }
+  function wouldClear(m, r, c) {
+    const g = G.grid.map((row) => row.slice());
+    m.forEach((row, i) => row.forEach((v, j) => { if (v) g[r + i][c + j] = 1; }));
+    return fullLines(g);
+  }
+
+  function place(idx, r, c) {
+    const p = G.tray[idx];
+    if (!p || G.over || !fits(p.m, r, c)) return false;
+    const put = [];
+    p.m.forEach((row, i) => row.forEach((v, j) => {
+      if (v) { G.grid[r + i][c + j] = p.color | (v === 2 ? EIL : 0); put.push([r + i, c + j]); }
+    }));
+    G.tray[idx] = null; G.moves++;
+    fx.flash = { cells: put, t: 0 };
+
+    const { rows, cols } = fullLines(G.grid);
+    const n = rows.length + cols.length;
+    if (n) {
+      let base = 0, ganz = 0;
+      const gone = new Set();
+      const take = (cells, dir) => {
+        const first = G.grid[cells[0][0]][cells[0][1]] & 7;
+        const mono = cells.every(([y, x]) => (G.grid[y][x] & 7) === first);
+        base += cells.length * (mono ? GANZZUG : 1);
+        if (mono) ganz++;
+        for (const [y, x] of cells) { gone.add(y * COLS + x); fx.depart.push({ r: y, c: x, v: G.grid[y][x], dir, t: 0 }); }
+      };
+      rows.forEach((y) => take(Array.from({ length: COLS }, (_, x) => [y, x]), 'h'));
+      cols.forEach((x) => take(Array.from({ length: ROWS }, (_, y) => [y, x]), 'v'));
+      for (const key of gone) {
+        const y = Math.floor(key / COLS), x = key % COLS;
+        if (G.grid[y][x] & EIL) G.eil++;
+        G.grid[y][x] = 0;
+      }
+      convertEil();
+      G.streak++; G.misses = 0;
+      const mult = n + G.streak - 1;
+      const gain = base * mult;
+      G.teu += gain; G.lines += n;
+      const title = n === 1 && ganz ? 'Ganzzug' : NAMES[Math.min(n, 4)];
+      pop(title, (n > 1 && ganz ? 'Ganzzug · ' : '') + '+' + fmt(gain) + ' TEU' + (mult > 1 ? ' · ×' + mult : ''));
+      if (G.grid.every((row) => row.every((v) => !v))) { G.teu += CLEAR_YARD; pop('Hof geräumt', '+' + CLEAR_YARD + ' TEU'); }
+      if (G.teu > best) { best = G.teu; store.set('ladehof.rekord', String(best)); }
+      say(title + ', ' + gain + ' TEU');
+      sfx.clear(n);
+    } else {
+      G.misses++;
+      if (G.misses >= 2) G.streak = 0;
+      sfx.place();
+    }
+    if (G.tray.every((t) => !t)) deal();
+    settle(false);
+    return true;
+  }
+  function swap() {
+    if (G.over || G.charges <= 0 || drag) return;
+    G.charges--; convertEil();
+    deal(); sel = null;
+    pop('Neue Lieferung', '');
+    say('Neue Lieferung');
+    sfx.swap();
+    settle(false);
+  }
+  // After every change: is the ramp blocked, is the shift over, then refresh counters and save.
+  function settle(quiet) {
+    G.stuck = !G.tray.some((p) => p && anyFit(p.m));
+    if (G.stuck && G.charges === 0 && !G.over) { G.over = true; if (!quiet) sfx.over(); }
+    if (G.over) {
+      sel = null;
+      showOverlay({
+        eyebrow: G.teu > 0 && G.teu > G.bestBefore ? 'Neuer Rekord' : 'Schichtende', title: 'Hof voll',
+        text: 'Keine Gruppe passt mehr. Du hast ' + fmt(G.teu) + ' TEU mit ' + G.lines + (G.lines === 1 ? ' Zug' : ' Zügen') + ' abgefertigt.',
+        primary: 'Neue Schicht', fn: newGame,
+      });
+      say('Hof voll. ' + G.teu + ' TEU abgefertigt.');
+    }
+    hud();
+    store.set('ladehof.stand', JSON.stringify({ v: 1, G }));
+    kick();
+  }
+  function askNew() {
+    if (G.over || G.moves === 0) { newGame(); return; }
+    showOverlay({
+      eyebrow: 'Schichtwechsel', title: 'Neue Schicht?',
+      text: 'Der Hof wird neu belegt und dein Stand von ' + fmt(G.teu) + ' TEU verfällt.',
+      primary: 'Neu starten', fn: newGame, extra: [{ label: 'Weiter', fn: () => showOverlay(null) }],
+    });
+  }
+  function showOverlay(o) {
+    if (!o) { els.overlay.hidden = true; primaryFn = null; return; }
+    els.ovEyebrow.textContent = o.eyebrow;
+    els.ovTitle.textContent = o.title;
+    els.ovText.textContent = o.text;
+    els.ovPrimary.textContent = o.primary;
+    primaryFn = o.fn;
+    els.ovExtra.replaceChildren(...(o.extra || []).map((x) => {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'btn'; b.textContent = x.label;
+      b.addEventListener('click', x.fn);
+      return b;
+    }));
+    els.overlay.hidden = false;
+    try { els.ovPrimary.focus({ preventScroll: true }); } catch (e) { /* focus is a convenience */ }
+  }
+  function toggleSound() {
+    const on = sfx.toggle();
+    els.btnSound.setAttribute('aria-pressed', String(on));
+    els.soundText.textContent = on ? 'Ton an' : 'Ton aus';
+  }
+  function hud() {
+    els.teu.textContent = fmt(G.teu);
+    els.best.textContent = fmt(best);
+    els.streak.textContent = G.streak;
+    els.lines.textContent = G.lines;
+    els.swapCount.textContent = G.charges;
+    els.btnSwap.disabled = G.over || G.charges <= 0;
+    els.btnSwap.classList.toggle('urgent', G.stuck && !G.over);
+    [...els.pips.children].forEach((el, i) => el.classList.toggle('on', i < G.eil));
+    els.pips.setAttribute('aria-label', 'Eilgut ' + G.eil + ' von ' + EIL_PER_CHARGE);
+  }
+  function pop(title, sub) {
+    fx.pops.push({ title, sub, t: 0, dur: 1100 });
+    if (fx.pops.length > 3) fx.pops.shift();
+  }
+  function say(text) { els.live.textContent = text; }
+  function hint() {
+    if (G.over) return '';
+    if (G.stuck) return 'Nichts passt mehr. Disponiere um.';
+    if (G.moves === 0) return 'Zieh eine Gruppe auf den Hof';
+    if (G.lines === 0) return 'Volle Reihen und Gassen fahren als Zug ab';
+    if (G.lines < 3) return 'Ein Zug in nur einer Farbe zählt dreifach';
+    return '';
+  }
+
+  // ---- drawing -------------------------------------------------------------
+  const ctx2d = els.yard.getContext('2d');
+  let cell = 32, tcell = 15, dpr = 1, ox = 0, oy = 0, cw = 0, ch = 0, trayY = 0, trayH = 0, slotW = 0, gapH = 0;
+  let T = null;
+  function readTheme() {
+    const cs = getComputedStyle(document.documentElement);
+    const v = (n) => cs.getPropertyValue(n).trim();
+    T = {
+      yard: v('--yard'), grid: v('--grid'), line: v('--line'), ink: v('--ink'), muted: v('--muted'), accent: v('--accent'),
+      eil: v('--eil'), eilInk: v('--eil-ink'), lite: v('--lite'), shade: v('--shade'),
+      c: [null, v('--c1'), v('--c2'), v('--c3'), v('--c4')],
+      display: v('--font-display'), data: v('--font-data'), body: v('--font-body'),
+    };
+  }
+  function layout() {
+    const w = els.stage.clientWidth, h = els.stage.clientHeight;
+    if (!w || !h) return;
+    cell = clamp(Math.floor(Math.min(w / (COLS + 1), h / (ROWS + 4.25))), 14, 56);
+    const gl = Math.round(cell * 0.75), gr = Math.round(cell * 0.2), gt = Math.round(cell * 0.55), gb = Math.round(cell * 0.15);
+    gapH = Math.round(cell * 0.6);
+    tcell = Math.max(7, Math.floor(cell * 0.48));
+    trayH = Math.round(cell * 2.9);
+    ox = gl; oy = gt; cw = gl + COLS * cell + gr;
+    trayY = oy + ROWS * cell + gapH; ch = trayY + trayH + gb;
+    slotW = (COLS * cell) / 3;
+    dpr = Math.min(window.devicePixelRatio || 1, 3);
+    els.yard.width = Math.round(cw * dpr); els.yard.height = Math.round(ch * dpr);
+    els.yard.style.width = cw + 'px'; els.yard.style.height = ch + 'px';
+  }
+
+  // One container seen from above: ribbed roof, corner castings, express diamond.
+  function box(g, x, y, s, code, alpha) {
+    const i = Math.max(0.5, s * 0.04), w = s - 2 * i, X = x + i, Y = y + i;
+    const edge = Math.max(1, w * 0.08), rib = Math.max(1, Math.round(s * 0.04)), k = Math.max(2, Math.round(w * 0.13));
+    g.globalAlpha = alpha;
+    g.fillStyle = T.c[code & 7] || T.muted;
+    g.fillRect(X, Y, w, w);
+    g.fillStyle = T.lite;
+    g.fillRect(X, Y, w, edge);
+    g.fillStyle = T.shade;
+    g.fillRect(X, Y + w - edge, w, edge);
+    for (const f of [0.26, 0.42, 0.58, 0.74]) g.fillRect(X + w * 0.16, Math.round(Y + w * f - rib / 2), w * 0.68, rib);
+    g.fillRect(X, Y, k, k); g.fillRect(X + w - k, Y, k, k);
+    g.fillRect(X, Y + w - k, k, k); g.fillRect(X + w - k, Y + w - k, k, k);
+    if (code & EIL) {
+      const cx = x + s / 2, cy = y + s / 2;
+      const diamond = (h) => { g.beginPath(); g.moveTo(cx, cy - h); g.lineTo(cx + h, cy); g.lineTo(cx, cy + h); g.lineTo(cx - h, cy); g.closePath(); };
+      diamond(s * 0.28);
+      g.fillStyle = T.eil; g.fill();
+      g.lineWidth = Math.max(1, s * 0.05); g.strokeStyle = T.eilInk; g.stroke();
+      diamond(s * 0.13);
+      g.fillStyle = T.accent; g.fill();
+    }
+    g.globalAlpha = 1;
+  }
+  function piece(g, p, x, y, s, alpha) {
+    p.m.forEach((row, i) => row.forEach((v, j) => {
+      if (v) box(g, x + j * s, y + i * s, s, p.color | (v === 2 ? EIL : 0), alpha);
+    }));
+  }
+  // top-left corner of the dragged group; on touch it floats above the finger
+  function dragPos() {
+    const m = G.tray[drag.idx].m, pw = m[0].length * cell, ph = m.length * cell;
+    return { x: drag.x - pw / 2, y: drag.touch ? drag.y - ph - Math.max(36, cell * 1.1) : drag.y - ph / 2 };
+  }
+  function snap(m, fc, fr) {
+    const c0 = Math.round(fc), r0 = Math.round(fr);
+    let hit = null, bd = 0.86;
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+      if (!fits(m, r0 + dr, c0 + dc)) continue;
+      const d = Math.hypot(c0 + dc - fc, r0 + dr - fr);
+      if (d < bd) { bd = d; hit = { r: r0 + dr, c: c0 + dc }; }
+    }
+    return hit;
+  }
+  function dragTarget() {
+    if (!drag || !drag.moved) return null;
+    const { x, y } = dragPos();
+    return snap(G.tray[drag.idx].m, (x - ox) / cell, (y - oy) / cell);
+  }
+
+  function draw() {
+    if (!cw || !T || !G) return;
+    const g = ctx2d, W = COLS * cell, H = ROWS * cell;
+    g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    g.clearRect(0, 0, cw, ch);
+    g.fillStyle = T.yard; g.fillRect(ox, oy, W, H);
+    g.strokeStyle = T.grid; g.lineWidth = 1; g.beginPath();
+    for (let c = 1; c < COLS; c++) { const x = ox + c * cell + 0.5; g.moveTo(x, oy); g.lineTo(x, oy + H); }
+    for (let r = 1; r < ROWS; r++) { const y = oy + r * cell + 0.5; g.moveTo(ox, y); g.lineTo(ox + W, y); }
+    g.stroke();
+
+    // yard addresses: lanes A to H, rows 01 to 10
+    const fs = clamp(cell * 0.3, 8, 12);
+    g.font = '500 ' + fs + 'px ' + T.data; g.fillStyle = T.muted; g.textBaseline = 'middle'; g.textAlign = 'center';
+    for (let c = 0; c < COLS; c++) g.fillText(String.fromCharCode(65 + c), ox + (c + 0.5) * cell, oy - cell * 0.3);
+    g.textAlign = 'right';
+    for (let r = 0; r < ROWS; r++) g.fillText(String(r + 1).padStart(2, '0'), ox - Math.max(5, cell * 0.2), oy + (r + 0.5) * cell);
+
+    g.save();
+    g.beginPath(); g.rect(ox, oy, W, H); g.clip();
+    for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) if (G.grid[r][c]) box(g, ox + c * cell, oy + r * cell, cell, G.grid[r][c], 1);
+
+    // where the group in hand would land, and the trains it would send off
+    let ghost = null;
+    const tgt = dragTarget();
+    if (tgt) ghost = { p: G.tray[drag.idx], r: tgt.r, c: tgt.c, ok: true };
+    else if (sel && !drag && G.tray[sel.idx]) ghost = { p: G.tray[sel.idx], r: sel.r, c: sel.c, ok: fits(G.tray[sel.idx].m, sel.r, sel.c) };
+    if (ghost) {
+      if (ghost.ok) {
+        const lines = wouldClear(ghost.p.m, ghost.r, ghost.c);
+        g.fillStyle = T.accent; g.globalAlpha = 0.24;
+        for (const y of lines.rows) g.fillRect(ox, oy + y * cell, W, cell);
+        for (const x of lines.cols) g.fillRect(ox + x * cell, oy, cell, H);
+        g.globalAlpha = 1;
+      }
+      piece(g, ghost.p, ox + ghost.c * cell, oy + ghost.r * cell, cell, ghost.ok ? 0.55 : 0.25);
+      if (!ghost.ok || (sel && !drag)) {
+        g.setLineDash([cell * 0.2, cell * 0.14]); g.lineWidth = Math.max(1.5, cell * 0.06);
+        g.strokeStyle = ghost.ok ? T.accent : T.ink;
+        ghost.p.m.forEach((row, i) => row.forEach((v, j) => {
+          if (v) g.strokeRect(ox + (ghost.c + j) * cell + cell * 0.08, oy + (ghost.r + i) * cell + cell * 0.08, cell * 0.84, cell * 0.84);
+        }));
+        g.setLineDash([]);
+      }
+    }
+    // trains pulling out: rows leave to the right, lanes towards the ramp
+    for (const d of fx.depart) {
+      const k = clamp(d.t / DEPART, 0, 1), e = k * k;
+      const dx = d.dir === 'h' ? e * W : 0, dy = d.dir === 'v' ? e * H : 0;
+      box(g, ox + d.c * cell + dx, oy + d.r * cell + dy, cell, d.v, 1 - k * 0.5);
+    }
+    if (fx.flash) {
+      g.globalAlpha = 0.5 * (1 - fx.flash.t / 140); g.fillStyle = T.eil;
+      for (const [r, c] of fx.flash.cells) g.fillRect(ox + c * cell, oy + r * cell, cell, cell);
+      g.globalAlpha = 1;
+    }
+    g.restore();
+
+    const lw = Math.max(2, Math.round(cell * 0.08));
+    g.strokeStyle = T.ink; g.lineWidth = lw; g.lineJoin = 'miter';
+    g.strokeRect(ox - lw / 2, oy - lw / 2, W + lw, H + lw);
+
+    const msg = hint();
+    if (msg) {
+      g.font = '500 ' + clamp(cell * 0.32, 10, 14) + 'px ' + T.body;
+      g.fillStyle = G.stuck ? T.accent : T.muted; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText(msg, ox + W / 2, oy + H + gapH / 2 + lw / 2);
+    }
+
+    // the ramp: three bays with the delivered groups
+    g.font = '500 ' + fs + 'px ' + T.data; g.textBaseline = 'top';
+    for (let i = 0; i < 3; i++) {
+      const x = ox + i * slotW, p = G.tray[i], active = (drag && drag.idx === i) || (sel && sel.idx === i);
+      g.lineWidth = active ? 2 : 1; g.strokeStyle = active ? T.accent : T.line;
+      g.setLineDash(active ? [] : [4, 4]);
+      g.strokeRect(Math.round(x + 4) + 0.5, Math.round(trayY) + 0.5, Math.round(slotW - 8), Math.round(trayH - 1));
+      g.setLineDash([]);
+      g.fillStyle = T.muted; g.textAlign = 'left';
+      g.fillText(String(i + 1), x + 10, trayY + 6);
+      if (!p || (drag && drag.idx === i && drag.moved)) continue;
+      const pw = p.m[0].length * tcell, ph = p.m.length * tcell;
+      piece(g, p, Math.round(x + (slotW - pw) / 2), Math.round(trayY + (trayH - ph) / 2), tcell, anyFit(p.m) ? 1 : 0.3);
+    }
+
+    g.textAlign = 'center'; g.textBaseline = 'middle'; g.lineJoin = 'round';
+    fx.pops.forEach((q, idx) => {
+      const k = q.t / q.dur, size = Math.max(18, cell * 0.95), sub = Math.max(11, cell * 0.4);
+      g.globalAlpha = k < 0.6 ? 1 : clamp(1 - (k - 0.6) / 0.4, 0, 1);
+      const x = ox + W / 2, y = oy + H * 0.36 + idx * cell * 1.9 - (reduceMotion ? 0 : k * cell * 0.7);
+      g.font = '400 ' + size + 'px ' + T.display;
+      g.lineWidth = Math.max(3, size * 0.22); g.strokeStyle = T.yard; g.strokeText(q.title, x, y);
+      g.fillStyle = T.ink; g.fillText(q.title, x, y);
+      if (q.sub) {
+        g.font = '600 ' + sub + 'px ' + T.data;
+        g.lineWidth = Math.max(3, sub * 0.3); g.strokeText(q.sub, x, y + size * 0.78);
+        g.fillStyle = T.accent; g.fillText(q.sub, x, y + size * 0.78);
+      }
+    });
+    g.globalAlpha = 1;
+
+    if (drag && drag.moved && G.tray[drag.idx]) {
+      const { x, y } = dragPos();
+      piece(g, G.tray[drag.idx], x, y, cell, 0.92);
+    }
+  }
+
+  // ---- loop ----------------------------------------------------------------
+  let raf = 0, last = 0;
+  function frame(ts) {
+    raf = 0;
+    const dt = clamp(ts - last, 0, 50); last = ts;
+    for (const d of fx.depart) d.t += dt;
+    fx.depart = fx.depart.filter((d) => d.t < DEPART);
+    for (const q of fx.pops) q.t += dt;
+    fx.pops = fx.pops.filter((q) => q.t < q.dur);
+    if (fx.flash && (fx.flash.t += dt) >= 140) fx.flash = null;
+    draw();
+    if (fx.depart.length || fx.pops.length || fx.flash) kick();
+  }
+  function kick() { if (!raf) raf = requestAnimationFrame(frame); }
+
+  // ---- input ---------------------------------------------------------------
+  const local = (e) => { const b = els.yard.getBoundingClientRect(); return { x: e.clientX - b.left, y: e.clientY - b.top }; };
+  const slotAt = (x, y) => (y >= trayY && y <= trayY + trayH && x >= ox && x < ox + COLS * cell ? Math.floor((x - ox) / slotW) : -1);
+  function select(i) {
+    if (G.over || !G.tray[i]) return;
+    const m = G.tray[i].m;
+    const r = sel ? sel.r : Math.floor((ROWS - m.length) / 2), c = sel ? sel.c : Math.floor((COLS - m[0].length) / 2);
+    sel = { idx: i, r: clamp(r, 0, ROWS - m.length), c: clamp(c, 0, COLS - m[0].length) };
+    kick();
+  }
+  els.yard.addEventListener('pointerdown', (e) => {
+    if (G.over || drag || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    sfx.unlock();
+    const pt = local(e), i = slotAt(pt.x, pt.y);
+    if (i >= 0 && G.tray[i]) {
+      try { els.yard.setPointerCapture(e.pointerId); } catch (err) { /* capture is optional */ }
+      drag = { idx: i, id: e.pointerId, x: pt.x, y: pt.y, x0: pt.x, y0: pt.y, touch: e.pointerType !== 'mouse', moved: false };
+      e.preventDefault(); kick();
+    } else if (sel && G.tray[sel.idx] && pt.y < oy + ROWS * cell && pt.y >= oy && pt.x >= ox && pt.x < ox + COLS * cell) {
+      // a group picked by tap or key: tap the yard to set it down there
+      const m = G.tray[sel.idx].m;
+      const fc = (pt.x - ox) / cell - m[0].length / 2, fr = (pt.y - oy) / cell - m.length / 2;
+      const hit = snap(m, fc, fr);
+      if (hit) { const idx = sel.idx; sel = null; place(idx, hit.r, hit.c); }
+      else { sel.r = clamp(Math.round(fr), 0, ROWS - m.length); sel.c = clamp(Math.round(fc), 0, COLS - m[0].length); kick(); }
+      e.preventDefault();
+    }
+  });
+  els.yard.addEventListener('pointermove', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const pt = local(e);
+    drag.x = pt.x; drag.y = pt.y;
+    if (!drag.moved && Math.hypot(pt.x - drag.x0, pt.y - drag.y0) > 8) { drag.moved = true; sel = null; }
+    kick();
+  });
+  els.yard.addEventListener('pointerup', (e) => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const idx = drag.idx, tgt = dragTarget(), moved = drag.moved;
+    drag = null;
+    if (tgt) place(idx, tgt.r, tgt.c);
+    else if (!moved) { if (sel && sel.idx === idx) sel = null; else select(idx); }
+    kick();
+  });
+  els.yard.addEventListener('pointercancel', () => { drag = null; kick(); });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    sfx.unlock();
+    const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+    if (!els.overlay.hidden) {
+      if (k === 'Enter' && primaryFn) { e.preventDefault(); primaryFn(); }
+      else if (k === 'Escape' && !G.over) showOverlay(null);
+      return;
+    }
+    if (k === '1' || k === '2' || k === '3') { select(Number(k) - 1); return; }
+    if (k === 'u') { swap(); return; }
+    if (k === 'm') { toggleSound(); return; }
+    if (k === 'n') { askNew(); return; }
+    const arrows = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0] };
+    if (arrows[k]) {
+      e.preventDefault();
+      if (!sel) { const i = G.tray.findIndex(Boolean); if (i >= 0) select(i); return; }
+      const m = G.tray[sel.idx].m;
+      sel.r = clamp(sel.r + arrows[k][0], 0, ROWS - m.length);
+      sel.c = clamp(sel.c + arrows[k][1], 0, COLS - m[0].length);
+      kick();
+    } else if ((k === 'Enter' || k === ' ') && sel && document.activeElement.tagName !== 'BUTTON') {
+      e.preventDefault();
+      const at = { r: sel.r, c: sel.c };
+      if (place(sel.idx, sel.r, sel.c)) {
+        const i = G.tray.findIndex(Boolean);
+        sel = null;
+        if (i >= 0 && !G.over) { sel = { idx: i, r: at.r, c: at.c }; select(i); }
+      }
+    } else if (k === 'Escape') { sel = null; kick(); }
+  });
+
+  els.ovPrimary.addEventListener('click', () => { sfx.unlock(); if (primaryFn) primaryFn(); });
+  els.btnNew.addEventListener('click', () => { askNew(); });
+  els.btnSound.addEventListener('click', () => { toggleSound(); els.btnSound.blur(); });
+  els.btnSwap.addEventListener('click', () => { sfx.unlock(); swap(); els.btnSwap.blur(); });
+
+  // ---- boot ----------------------------------------------------------------
+  const retheme = () => { readTheme(); draw(); };
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', retheme);
+  new MutationObserver(retheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  new ResizeObserver(() => { layout(); draw(); }).observe(els.stage);
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { draw(); });
+
+  const valid = (d) => d && d.v === 1 && d.G && Array.isArray(d.G.grid) && d.G.grid.length === ROWS &&
+    d.G.grid.every((row) => Array.isArray(row) && row.length === COLS) && Array.isArray(d.G.tray) && d.G.tray.length === 3;
+  function boot(data) {
+    readTheme();
+    els.btnSound.setAttribute('aria-pressed', String(sfx.on));
+    els.soundText.textContent = sfx.on ? 'Ton an' : 'Ton aus';
+    let saved = valid(data) ? data : null;
+    if (!saved) { try { const d = JSON.parse(store.get('ladehof.stand')); if (valid(d)) saved = d; } catch (e) { /* start fresh */ } }
+    // a running shift survives a reload or a page update
+    if (saved) { G = Object.assign(fresh(), saved.G); settle(true); } else newGame();
+    layout(); draw();
+  }
+  const hot = window.claude && window.claude.hot;
+  if (hot && hot.snapshot) hot.snapshot(() => ({ v: 1, G }));
+  if (hot && hot.ready) hot.ready(boot); else boot((hot && hot.data) || {});
+})();
+</script>
+</body>
+</html>
