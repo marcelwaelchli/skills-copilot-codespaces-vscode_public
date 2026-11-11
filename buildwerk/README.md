@@ -165,7 +165,8 @@ Der Workflow `.github/workflows/buildwerk.yml` führt die Tests bei jeder Änder
 
 Version 0.1 ist ein erster, lauffähiger Stand.
 
-- Entwickelt und getestet unter Linux. Die Windows-Pfade (Aufruf von `.cmd`-Dateien, PowerShell, Beenden von Prozessbäumen) sind umgesetzt, aber noch nicht auf einem Windows-Rechner geprüft. Dasselbe gilt für macOS und für den Betrieb in GitHub Codespaces.
+- Die automatischen Tests laufen in GitHub Actions unter Linux, Windows und macOS, unter Windows samt PowerShell, cmd, `.cmd`-Wrappern und dem Beenden von Prozessbäumen. Die Oberfläche im Browser wurde bisher nur unter Linux bedient; der Betrieb in GitHub Codespaces ist ungetestet.
+- Wirklich aufgerufen werden in den Tests npm, Python, Make, CMake, Go, Cargo, Maven, Gradle und Git. Für .NET, MSBuild und Docker ist nur die zusammengebaute Befehlszeile geprüft.
 - Noch nicht enthalten: E-Mail- und FTP-Versand, Windows-Spezifisches (Registry, Dienste, IIS), Eingabedialoge beim Start, Zeitplanung, verteilte Ausführung. Vieles davon geht einstweilen über «Shell-Befehl».
 - ZIP-Archive sind auf 4 GB begrenzt (kein ZIP64).
 - Die Oberfläche ist deutsch.
