@@ -1,0 +1,45 @@
+{
+  "format": "buildwerk/1",
+  "name": "Node.js-Projekt bauen",
+  "description": "Installiert Abhängigkeiten, testet, baut und packt das Ergebnis in ein ZIP mit Version und Commit im Namen.",
+  "baseDir": ".",
+  "variables": [
+    { "name": "DIST_DIR", "value": "dist", "description": "Ordner mit dem Build-Ergebnis" },
+    { "name": "RELEASE_DIR", "value": "release", "description": "Zielordner für das ZIP" },
+    { "name": "VERSION", "value": "", "description": "Wird aus der package.json gelesen" }
+  ],
+  "operations": [
+    { "id": "op_node01", "type": "git.info", "enabled": true, "props": { "prefix": "GIT_" } },
+    {
+      "id": "op_node02",
+      "type": "var.script",
+      "name": "Version aus package.json lesen",
+      "enabled": true,
+      "props": { "code": "const pkg = require(vars.get('BASE_DIR') + '/package.json');\nvars.set('VERSION', pkg.version);\nlog('Version ' + pkg.version);" }
+    },
+    {
+      "id": "op_node03",
+      "type": "flow.group",
+      "name": "Bauen und testen",
+      "enabled": true,
+      "props": {},
+      "children": [
+        { "id": "op_node04", "type": "build.npm", "enabled": true, "props": { "manager": "npm", "command": "ci" } },
+        { "id": "op_node05", "type": "build.npm", "enabled": true, "props": { "manager": "npm", "command": "test" } },
+        { "id": "op_node06", "type": "build.npm", "enabled": true, "props": { "manager": "npm", "command": "run", "script": "build" } }
+      ]
+    },
+    {
+      "id": "op_node07",
+      "type": "file.zip",
+      "enabled": true,
+      "props": { "source": "${DIST_DIR}", "dest": "${RELEASE_DIR}/app-${VERSION}-${GIT_COMMIT_SHORT}.zip" }
+    },
+    {
+      "id": "op_node08",
+      "type": "var.log",
+      "enabled": true,
+      "props": { "message": "Paket liegt unter ${RELEASE_DIR}/app-${VERSION}-${GIT_COMMIT_SHORT}.zip", "level": "info" }
+    }
+  ]
+}

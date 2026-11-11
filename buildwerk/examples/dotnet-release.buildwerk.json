@@ -1,0 +1,70 @@
+{
+  "format": "buildwerk/1",
+  "name": ".NET-Release",
+  "description": "Zählt die Build-Nummer hoch, baut und testet die Solution, veröffentlicht sie und meldet das Ergebnis per Webhook.",
+  "baseDir": ".",
+  "variables": [
+    { "name": "SOLUTION", "value": "MeineApp.sln", "description": "Solution oder Projektdatei" },
+    { "name": "CONFIG", "value": "Release", "description": "Build-Konfiguration" },
+    { "name": "BUILD_NR", "value": "0", "description": "Fortlaufende Build-Nummer", "persistent": true },
+    { "name": "OUT_DIR", "value": "artefakte", "description": "Ausgabeordner" },
+    { "name": "WEBHOOK_URL", "value": "", "description": "Slack-Webhook; leer = keine Benachrichtigung", "secret": true },
+    { "name": "ERGEBNIS", "value": "", "description": "Text der Benachrichtigung, wird im Lauf gesetzt" },
+    { "name": "FEHLER", "value": "", "description": "Fehlermeldung, falls der Build scheitert" }
+  ],
+  "operations": [
+    { "id": "op_net01", "type": "var.version", "enabled": true, "props": { "name": "BUILD_NR", "part": "last" } },
+    { "id": "op_net02", "type": "file.mkdir", "enabled": true, "props": { "path": "${OUT_DIR}", "clean": true } },
+    {
+      "id": "op_net03",
+      "type": "flow.try",
+      "enabled": true,
+      "props": {},
+      "children": [
+        { "id": "op_net04", "type": "build.dotnet", "enabled": true, "props": { "command": "restore", "project": "${SOLUTION}" } },
+        { "id": "op_net05", "type": "build.dotnet", "enabled": true, "props": { "command": "build", "project": "${SOLUTION}", "configuration": "${CONFIG}", "extraArgs": "--no-restore -p:BuildNumber=${BUILD_NR}" } },
+        { "id": "op_net06", "type": "build.dotnet", "enabled": true, "props": { "command": "test", "project": "${SOLUTION}", "configuration": "${CONFIG}", "extraArgs": "--no-build" } },
+        { "id": "op_net07", "type": "build.dotnet", "enabled": true, "props": { "command": "publish", "project": "${SOLUTION}", "configuration": "${CONFIG}", "output": "${OUT_DIR}/publish", "extraArgs": "--no-build" } },
+        { "id": "op_net08", "type": "file.zip", "enabled": true, "props": { "source": "${OUT_DIR}/publish", "dest": "${OUT_DIR}/MeineApp-build${BUILD_NR}.zip" } },
+        { "id": "op_net09", "type": "var.set", "enabled": true, "props": { "name": "ERGEBNIS", "value": "Build ${BUILD_NR} ist fertig." } }
+      ]
+    },
+    {
+      "id": "op_net10",
+      "type": "flow.catch",
+      "enabled": true,
+      "props": {},
+      "children": [
+        { "id": "op_net11", "type": "var.set", "enabled": true, "props": { "name": "ERGEBNIS", "value": "Build ${BUILD_NR} ist fehlgeschlagen: ${ERROR_MESSAGE}" } },
+        { "id": "op_net12", "type": "var.set", "enabled": true, "props": { "name": "FEHLER", "value": "${ERROR_MESSAGE}" } }
+      ]
+    },
+    {
+      "id": "op_net13",
+      "type": "flow.finally",
+      "enabled": true,
+      "props": {},
+      "children": [
+        {
+          "id": "op_net14",
+          "type": "flow.if",
+          "enabled": true,
+          "props": { "left": "${WEBHOOK_URL}", "operator": "isNotEmpty" },
+          "children": [
+            { "id": "op_net15", "type": "net.notify", "enabled": true, "onError": "continue", "props": { "service": "slack", "url": "${WEBHOOK_URL}", "message": "${ERGEBNIS}" } }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "op_net16",
+      "type": "flow.if",
+      "name": "Fehler weitergeben",
+      "enabled": true,
+      "props": { "left": "${FEHLER}", "operator": "isNotEmpty" },
+      "children": [
+        { "id": "op_net17", "type": "flow.fail", "enabled": true, "props": { "message": "${FEHLER}" } }
+      ]
+    }
+  ]
+}

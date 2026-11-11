@@ -1,0 +1,162 @@
+{
+  "format": "buildwerk/1",
+  "name": "Rundgang",
+  "description": "Zeigt die wichtigsten Bausteine: Variablen, Schleifen, Bedingungen, parallele Schritte und Fehlerbehandlung. Schreibt nur in einen temporären Ordner.",
+  "baseDir": ".",
+  "variables": [
+    { "name": "PROJECT", "value": "demo-app", "description": "Name des Beispielprojekts" },
+    { "name": "VERSION", "value": "1.0.0", "description": "Wird beim Lauf um eine Patch-Stelle erhöht" },
+    { "name": "OUT_DIR", "value": "${TEMP_DIR}/ausgabe", "description": "Arbeitsordner, wird nach dem Lauf gelöscht" },
+    { "name": "BUILD_HOST", "value": "", "description": "Wird vom Shell-Schritt gesetzt" }
+  ],
+  "operations": [
+    {
+      "id": "op_tour01",
+      "type": "var.comment",
+      "enabled": true,
+      "props": { "text": "Mit F5 starten. Jede Operation lässt sich anklicken und rechts bearbeiten." }
+    },
+    {
+      "id": "op_tour02",
+      "type": "flow.group",
+      "name": "Vorbereiten",
+      "enabled": true,
+      "props": {},
+      "children": [
+        { "id": "op_tour03", "type": "file.mkdir", "enabled": true, "props": { "path": "${OUT_DIR}/src", "clean": true } },
+        { "id": "op_tour04", "type": "var.version", "enabled": true, "props": { "name": "VERSION", "part": "patch" } },
+        {
+          "id": "op_tour05",
+          "type": "flow.foreach",
+          "enabled": true,
+          "props": { "source": "list", "items": "kern\napi\noberflaeche", "variable": "MODUL" },
+          "children": [
+            {
+              "id": "op_tour06",
+              "type": "file.write",
+              "enabled": true,
+              "props": { "file": "${OUT_DIR}/src/${MODUL}.txt", "content": "Modul ${MODUL}, Version ${VERSION}\n", "mode": "overwrite" }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "op_tour07",
+      "type": "flow.group",
+      "name": "Bauen",
+      "enabled": true,
+      "props": {},
+      "children": [
+        {
+          "id": "op_tour08",
+          "type": "flow.if",
+          "enabled": true,
+          "props": { "left": "${OS}", "operator": "equals", "right": "windows" },
+          "children": [
+            {
+              "id": "op_tour09",
+              "type": "run.shell",
+              "enabled": true,
+              "props": { "script": "Write-Output \"Baue $env:PROJECT $env:VERSION unter Windows\"\nAdd-Content -Path $env:BUILDWERK_VARS -Value \"BUILD_HOST=$env:COMPUTERNAME\"", "shell": "auto" }
+            }
+          ]
+        },
+        {
+          "id": "op_tour10",
+          "type": "flow.else",
+          "enabled": true,
+          "props": {},
+          "children": [
+            {
+              "id": "op_tour11",
+              "type": "run.shell",
+              "enabled": true,
+              "props": { "script": "echo \"Baue $PROJECT $VERSION unter $(uname -s)\"\necho \"BUILD_HOST=$(uname -n)\" >> \"$BUILDWERK_VARS\"", "shell": "auto" }
+            }
+          ]
+        },
+        {
+          "id": "op_tour12",
+          "type": "flow.parallel",
+          "name": "Prüfungen gleichzeitig",
+          "enabled": true,
+          "props": {},
+          "children": [
+            {
+              "id": "op_tour13",
+              "type": "flow.group",
+              "name": "Prüfung A",
+              "enabled": true,
+              "props": {},
+              "children": [
+                { "id": "op_tour14", "type": "flow.delay", "enabled": true, "props": { "seconds": "1" } },
+                { "id": "op_tour15", "type": "var.log", "enabled": true, "props": { "message": "Prüfung A bestanden", "level": "info" } }
+              ]
+            },
+            {
+              "id": "op_tour16",
+              "type": "flow.group",
+              "name": "Prüfung B",
+              "enabled": true,
+              "props": {},
+              "children": [
+                { "id": "op_tour17", "type": "flow.delay", "enabled": true, "props": { "seconds": "1" } },
+                { "id": "op_tour18", "type": "var.log", "enabled": true, "props": { "message": "Prüfung B bestanden", "level": "info" } }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "op_tour19",
+      "type": "flow.try",
+      "enabled": true,
+      "props": {},
+      "children": [
+        {
+          "id": "op_tour20",
+          "type": "file.replace",
+          "enabled": true,
+          "props": { "files": "${OUT_DIR}/src/*.txt", "search": "Version ", "replace": "v" }
+        },
+        {
+          "id": "op_tour21",
+          "type": "flow.fail",
+          "enabled": true,
+          "props": { "message": "Absichtlicher Fehler, um die Fehlerbehandlung zu zeigen" }
+        }
+      ]
+    },
+    {
+      "id": "op_tour22",
+      "type": "flow.catch",
+      "enabled": true,
+      "props": {},
+      "children": [
+        { "id": "op_tour23", "type": "var.log", "enabled": true, "props": { "message": "Abgefangen: ${ERROR_MESSAGE}", "level": "warn" } }
+      ]
+    },
+    {
+      "id": "op_tour24",
+      "type": "flow.finally",
+      "enabled": true,
+      "props": {},
+      "children": [
+        {
+          "id": "op_tour25",
+          "type": "file.zip",
+          "enabled": true,
+          "props": { "source": "${OUT_DIR}/src", "dest": "${OUT_DIR}/${PROJECT}-${VERSION}.zip" }
+        }
+      ]
+    },
+    {
+      "id": "op_tour26",
+      "type": "var.log",
+      "enabled": true,
+      "props": { "message": "Fertig: ${PROJECT} ${VERSION}, gebaut auf ${BUILD_HOST} am ${DATE} um ${TIME}", "level": "info" }
+    }
+  ]
+}
