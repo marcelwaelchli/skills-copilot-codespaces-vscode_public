@@ -50,12 +50,16 @@ export function formatCommand(cmd, args) {
  * cmd.exe, never in the working directory, where a checked-out repository
  * could plant a look-alike. A path such as `.\gradlew.bat` is relative to it.
  */
-function resolveWindowsCommand(cmd, env, cwd = process.cwd()) {
-  const extensions = (env.PATHEXT || '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean);
+export function resolveWindowsCommand(cmd, env, cwd = process.cwd()) {
+  const pathExt = (env.PATHEXT || '.COM;.EXE;.BAT;.CMD').split(';').filter(Boolean);
+  // Windows only runs files with an executable extension. Node and Maven ship a shell
+  // script called `npm` / `mvn` right next to `npm.cmd` / `mvn.cmd`; a name without
+  // extension must therefore never match the file of exactly that name.
+  const extensions = path.extname(cmd) ? ['', ...pathExt] : pathExt;
   const hasDir = /[\\/]/.test(cmd);
   const dirs = hasDir ? [cwd] : (env.Path || env.PATH || '').split(';').filter(Boolean);
   for (const dir of dirs) {
-    for (const ext of ['', ...extensions]) {
+    for (const ext of extensions) {
       const candidate = path.resolve(dir, cmd + ext);
       try {
         if (fs.statSync(candidate).isFile()) return candidate;

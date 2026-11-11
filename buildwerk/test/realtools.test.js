@@ -132,11 +132,12 @@ test('Gradle runs a task', { skip: !onPath('gradle'), ...slow }, async () => {
 test('Git: clone, commit, push, pull and checkout against a real remote', { skip: !onPath('git'), ...slow }, async () => {
   const { dir, run } = await project('git', {});
   const git = (cwd, ...args) => execFileSync('git', args, { cwd, stdio: 'pipe', encoding: 'utf8' }).trim();
-  // Identity and signing come from the environment, so the test does not depend on the machine's git config.
+  // Identity and settings come from the environment, so the test does not depend on the machine's git config.
   const saved = { ...process.env };
   Object.assign(process.env, {
     GIT_AUTHOR_NAME: 'Test', GIT_AUTHOR_EMAIL: 'test@example.invalid', GIT_COMMITTER_NAME: 'Test', GIT_COMMITTER_EMAIL: 'test@example.invalid',
-    GIT_CONFIG_COUNT: '1', GIT_CONFIG_KEY_0: 'commit.gpgsign', GIT_CONFIG_VALUE_0: 'false',
+    // No commit signing, and no line-ending conversion (Git for Windows turns LF into CRLF by default).
+    GIT_CONFIG_COUNT: '2', GIT_CONFIG_KEY_0: 'commit.gpgsign', GIT_CONFIG_VALUE_0: 'false', GIT_CONFIG_KEY_1: 'core.autocrlf', GIT_CONFIG_VALUE_1: 'false',
   });
   try {
     const remote = path.join(dir, 'remote.git');

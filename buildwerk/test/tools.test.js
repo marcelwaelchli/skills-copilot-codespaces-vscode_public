@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import { catalog, SYSTEM_VARIABLES } from '../src/catalog/index.js';
-import { formatCommand, splitArgs, stripAnsi } from '../src/process.js';
+import { formatCommand, resolveWindowsCommand, splitArgs, stripAnsi } from '../src/process.js';
 import { exportGithubActions, suggestWorkflowPath } from '../src/shared/export-gha.js';
 import { cloneOp, createOp, summarize } from '../src/shared/model.js';
 import { validateMacro } from '../src/shared/validate.js';
@@ -22,6 +22,27 @@ test('splitArgs honours quotes; formatCommand quotes for display', () => {
   assert.deepEqual(splitArgs('""'), ['']);
   assert.equal(formatCommand('git', ['commit', '-m', 'zwei worte']), 'git commit -m "zwei worte"');
   assert.equal(stripAnsi('\x1b[32mgrün\x1b[0m'), 'grün');
+});
+
+test('Windows command lookup prefers an executable extension over a same-named script', async () => {
+  // Node and Maven ship `npm` / `mvn` (shell scripts) next to `npm.cmd` / `mvn.cmd`.
+  // Windows cannot run the extension-less file, so the lookup must not pick it.
+  const dir = await tempDir();
+  const other = await tempDir();
+  for (const name of ['npm', 'npm.cmd', 'tool.exe', 'gradlew.bat']) await fs.writeFile(path.join(dir, name), '');
+  const env = { Path: [other, dir].join(';'), PATHEXT: '.exe;.cmd;.bat' };
+  try {
+    assert.equal(resolveWindowsCommand('npm', env, other), path.join(dir, 'npm.cmd'));
+    assert.equal(resolveWindowsCommand('tool', env, other), path.join(dir, 'tool.exe'));
+    assert.equal(resolveWindowsCommand('tool.exe', env, other), path.join(dir, 'tool.exe'));
+    // A path is relative to the working directory, and bare names are never taken from it.
+    assert.equal(resolveWindowsCommand('./gradlew.bat', env, dir), path.join(dir, 'gradlew.bat'));
+    assert.equal(resolveWindowsCommand('gradlew', { ...env, Path: other }, dir), 'gradlew');
+    assert.equal(resolveWindowsCommand('fehlt', env, other), 'fehlt');
+  } finally {
+    await fs.rm(dir, { recursive: true });
+    await fs.rm(other, { recursive: true });
+  }
 });
 
 test('every operation in the catalog is complete and consistent', () => {
