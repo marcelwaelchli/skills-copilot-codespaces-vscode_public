@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -18,6 +19,13 @@ export const group = (children, extra) => op('flow.group', {}, { children, ...ex
 
 export async function tempDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), 'buildwerk-test-'));
+}
+
+/** True when a program is installed; used to skip tests for tools that are not there. */
+export function onPath(command) {
+  const extensions = process.platform === 'win32' ? (process.env.PATHEXT || '.EXE;.CMD;.BAT').split(';') : [''];
+  const dirs = (process.env.PATH || '').split(path.delimiter).filter(Boolean);
+  return dirs.some((dir) => extensions.some((ext) => existsSync(path.join(dir, command + ext))));
 }
 
 /** Runs a macro and collects what happened in a form that is easy to assert on. */

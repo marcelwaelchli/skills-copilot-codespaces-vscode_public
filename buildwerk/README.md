@@ -157,7 +157,9 @@ Makros können beliebige Programme starten. Ein Makro aus fremder Quelle sollte 
 cd buildwerk && npm test
 ```
 
-Die Tests decken die Ausführungs-Engine, Dateioperationen und ZIP, Git, HTTP, den Export und den Server samt Zugriffsschutz ab.
+Die Tests decken die Ausführungs-Engine, Dateioperationen und ZIP, Git, HTTP, den Export und den Server samt Zugriffsschutz ab. Für jede Werkzeug-Operation wird die zusammengebaute Befehlszeile geprüft. npm, Python, Make, CMake, Go, Cargo, Maven, Gradle und Git werden zusätzlich wirklich aufgerufen, sofern sie installiert sind; fehlt ein Werkzeug, wird sein Test übersprungen.
+
+Der Workflow `.github/workflows/buildwerk.yml` führt die Tests bei jeder Änderung unter Linux, Windows und macOS aus.
 
 ## Stand und Grenzen
 

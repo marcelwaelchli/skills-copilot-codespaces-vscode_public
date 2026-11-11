@@ -74,9 +74,14 @@ export default [
       if (!shell) throw new OperationError(`Unbekannter Interpreter «${name}».`);
       let script = p.script;
       if (shell.powershell) {
-        script = `$ErrorActionPreference = 'Stop'\n${script}\nif (Test-Path -LiteralPath variable:\\LASTEXITCODE) { exit $LASTEXITCODE }\n`;
+        // The BOM makes Windows PowerShell read the file as UTF-8; the encoding lines make it
+        // write UTF-8 too. Without them, umlauts arrive garbled in both directions.
+        const utf8 = '[System.Text.Encoding]::UTF8';
+        const prelude = `$ErrorActionPreference = 'Stop'\ntry { [Console]::OutputEncoding = ${utf8} } catch {}\n$OutputEncoding = ${utf8}\n`;
+        script = `﻿${prelude}${script}\nif (Test-Path -LiteralPath variable:\\LASTEXITCODE) { exit $LASTEXITCODE }\n`;
       } else if (name === 'cmd') {
-        script = `@echo off\r\n${script.replace(/\r?\n/g, '\r\n')}\r\n`;
+        // Code page 65001 = UTF-8, for the rest of the script file and for its output.
+        script = `@echo off\r\nchcp 65001>nul\r\n${script.replace(/\r?\n/g, '\r\n')}\r\n`;
       }
       const file = path.join(ctx.tmpDir, `script-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${shell.ext}`);
       await fs.writeFile(file, script);

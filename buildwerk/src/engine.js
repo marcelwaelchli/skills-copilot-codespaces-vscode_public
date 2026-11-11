@@ -22,6 +22,15 @@ function pad(n) {
   return String(n).padStart(2, '0');
 }
 
+/**
+ * Decodes a file written by a child process. Windows PowerShell's `>>` writes
+ * UTF-16 with a byte order mark; everything else is treated as UTF-8.
+ */
+function decodeText(buffer) {
+  const utf16 = buffer.length >= 2 && buffer[0] === 0xff && buffer[1] === 0xfe;
+  return buffer.toString(utf16 ? 'utf16le' : 'utf8').replace(/^﻿/, '');
+}
+
 /** Groups if/else-if/else and try/catch/finally siblings into one unit each. */
 function chainUnits(ops) {
   const units = [];
@@ -662,7 +671,7 @@ export class MacroRun extends EventEmitter {
     this.setVar('LAST_EXIT_CODE', code);
 
     // Processes hand variables back by appending NAME=value lines to $BUILDWERK_VARS.
-    const handedBack = await fs.readFile(varsFile, 'utf8').catch(() => '');
+    const handedBack = decodeText(await fs.readFile(varsFile).catch(() => Buffer.alloc(0)));
     for (const [name, value] of Object.entries(parseKeyValues(handedBack))) {
       if (VAR_NAME.test(name)) this.setVar(name, value);
       else this.output(exec, 'warn', `Ungültiger Variablenname in BUILDWERK_VARS: «${name}»`);
